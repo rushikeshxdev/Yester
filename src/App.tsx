@@ -69,7 +69,7 @@ export const App: React.FC = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#090A0C] dark:bg-[#090A0C] light:bg-[#FCFCFC] text-white dark:text-white light:text-neutral-900 transition-colors flex flex-col font-sans selection:bg-[#FF7138] selection:text-white">
+    <div className="min-h-screen bg-[#090A0C] dark:bg-[#090A0C] light:bg-[#F5F4F0] text-white dark:text-[#F5F4F0] light:text-[#191B20] transition-colors flex flex-col font-sans selection:bg-[#FF7138] selection:text-white">
       {/* TIME FIRST Global Header Nav */}
       <BreadcrumbNav />
 

@@ -126,7 +126,6 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const parts = parseDateKey(dateKey);
     setYear(parts.year);
     setMonth(parts.month);
-    setScreen('daily');
   }, []);
 
   const goToToday = useCallback(() => {

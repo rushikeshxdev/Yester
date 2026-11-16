@@ -6,7 +6,7 @@ import {
 } from '../types';
 import {
   getDaysInMonth,
-  getFirstWeekdayOfMonthMondayFirst,
+  getFirstWeekdayOfMonth,
   getMonthName,
   getShortMonthName,
   formatDateKey,
@@ -91,11 +91,12 @@ export function generateCalendarGrid(
   year: number,
   month: number,
   selectedDateKey?: string,
-  allRecords: Record<string, DailyRecord> = getAllDailyRecords()
+  allRecords: Record<string, DailyRecord> = getAllDailyRecords(),
+  firstDayOfWeek: 0 | 1 = 1
 ): DayActivitySummary[] {
   const todayKey = getTodayDateKey();
   const daysInCurrentMonth = getDaysInMonth(year, month);
-  const firstWeekday = getFirstWeekdayOfMonthMondayFirst(year, month); // 0 = Mon, 6 = Sun
+  const firstWeekday = getFirstWeekdayOfMonth(year, month, firstDayOfWeek);
 
   const grid: DayActivitySummary[] = [];
 

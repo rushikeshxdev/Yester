@@ -5,6 +5,7 @@ import {
   Calendar as CalendarIcon,
   Plus,
   ArrowRight,
+  ArrowLeft,
   BookOpen,
 } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
@@ -36,10 +37,17 @@ export const MonthlyCalendar: React.FC = () => {
     records,
     openQuickCapture,
     navigateToJournal,
+    navigateToMonths,
     preferences,
   } = useLifeOS();
 
-  const grid = generateCalendarGrid(year, month, selectedDate, records);
+  const grid = generateCalendarGrid(
+    year,
+    month,
+    selectedDate,
+    records,
+    preferences?.firstDayOfWeek ?? 1
+  );
   const monthName = getMonthName(month);
 
   // Determine weekday headers based on user preferences (1 = Monday, 0 = Sunday)
@@ -135,7 +143,17 @@ export const MonthlyCalendar: React.FC = () => {
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8 select-none">
       {/* Month Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#1E2229] dark:border-[#1E2229] light:border-neutral-200">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Back to 12-Month Folio */}
+          <button
+            onClick={navigateToMonths}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black hover:bg-[#14171C] dark:hover:bg-[#14171C] light:hover:bg-neutral-100 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 transition-all cursor-pointer"
+            title={`Return to ${year} Annual Overview`}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{year} Folio</span>
+          </button>
+
           {/* Previous Month Chevron */}
           <button
             onClick={handlePrevMonth}

@@ -72,13 +72,22 @@ export function getTodayDateKey(): string {
 }
 
 /**
+ * Returns index 0-6 based on firstDayOfWeek (1 = Monday-first, 0 = Sunday-first)
+ */
+export function getFirstWeekdayOfMonth(year: number, month: number, firstDayOfWeek: 0 | 1 = 1): number {
+  const date = new Date(year, month - 1, 1);
+  const sundayZeroDay = date.getDay();
+  if (firstDayOfWeek === 0) {
+    return sundayZeroDay;
+  }
+  return sundayZeroDay === 0 ? 6 : sundayZeroDay - 1;
+}
+
+/**
  * Returns index 0-6 where 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
  */
 export function getFirstWeekdayOfMonthMondayFirst(year: number, month: number): number {
-  // JavaScript Date getDay(): 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  const date = new Date(year, month - 1, 1);
-  const sundayZeroDay = date.getDay();
-  return sundayZeroDay === 0 ? 6 : sundayZeroDay - 1;
+  return getFirstWeekdayOfMonth(year, month, 1);
 }
 
 export function getMonthName(month: number): string {

@@ -72,14 +72,14 @@ export const YearSelector: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNextYear, handlePrevYear, handleEnterYear]);
 
-  // Wheel listener: Natural horizontal or vertical scroll moves the year dial
+  // Wheel listener: ONLY horizontal trackpad/mouse scroll moves the year dial; vertical scroll is ignored
   const handleWheel = (e: React.WheelEvent) => {
     if (wheelLockRef.current) return;
 
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(delta) > 24) {
+    // Only listen to horizontal deltaX (ignore vertical deltaY completely)
+    if (Math.abs(e.deltaX) > 25 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       wheelLockRef.current = true;
-      if (delta > 0) {
+      if (e.deltaX > 0) {
         handleNextYear();
       } else {
         handlePrevYear();
@@ -332,7 +332,7 @@ export const YearSelector: React.FC = () => {
 
           {/* Dynamic exploration prompt */}
           <span className="text-[11px] font-mono tracking-widest text-neutral-400 dark:text-neutral-500 light:text-neutral-500 uppercase flex items-center gap-2 pt-1 opacity-80">
-            <span>Scroll or use arrow keys to explore</span>
+            <span>&larr; Swipe, use arrow keys, or click to explore &rarr;</span>
           </span>
         </div>
       </div>

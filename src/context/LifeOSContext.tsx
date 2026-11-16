@@ -16,6 +16,7 @@ import {
   clearAllUserData,
 } from '../services/storage';
 import { getTodayDateKey, parseDateKey, formatDateKey } from '../utils/dateUtils';
+import { parseHash, buildHash } from '../utils/routerUtils';
 
 interface QuickCaptureState {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface QuickCaptureState {
 interface LifeOSContextType {
   // Navigation state
   screen: ScreenMode;
+  previousScreen: ScreenMode | null;
   year: number;
   month: number;
   selectedDate: string;
@@ -80,10 +82,19 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const todayKey = getTodayDateKey();
   const todayParts = parseDateKey(todayKey);
 
-  const [screen, setScreen] = useState<ScreenMode>('year');
-  const [year, setYear] = useState<number>(todayParts.year);
-  const [month, setMonth] = useState<number>(todayParts.month);
-  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
+  // Initialize from URL hash if available (supports deep linking & reload survival)
+  const initialRoute = typeof window !== 'undefined' ? parseHash(window.location.hash) : null;
+
+  const [screen, setScreenState] = useState<ScreenMode>(initialRoute?.screen ?? 'year');
+  const [previousScreen, setPreviousScreen] = useState<ScreenMode | null>(null);
+  const [year, setYearState] = useState<number>(initialRoute?.year ?? todayParts.year);
+  const [month, setMonthState] = useState<number>(initialRoute?.month ?? todayParts.month);
+  const [selectedDate, setSelectedDateState] = useState<string>(
+    initialRoute?.dateKey ??
+      (initialRoute?.year && initialRoute?.month
+        ? formatDateKey(initialRoute.year, initialRoute.month, 1)
+        : todayKey)
+  );
   const [activeCategoryModal, setActiveCategoryModal] = useState<ActivityCategory | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
@@ -105,67 +116,114 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => unsubscribe();
   }, []);
 
+  // Synchronize state changes to URL hash (two-way router)
+  useEffect(() => {
+    const targetHash = buildHash({ screen, year, month, selectedDate });
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
+    }
+  }, [screen, year, month, selectedDate]);
+
+  // Listen to browser Back/Forward navigation (hashchange)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const route = parseHash(window.location.hash);
+      if (!route) return;
+
+      setScreenState((currentScreen) => {
+        if (currentScreen !== route.screen) {
+          setPreviousScreen(currentScreen);
+          return route.screen;
+        }
+        return currentScreen;
+      });
+
+      if (route.year) {
+        setYearState((cur) => (cur !== route.year ? route.year! : cur));
+      }
+      if (route.month) {
+        setMonthState((cur) => (cur !== route.month ? route.month! : cur));
+      }
+      if (route.dateKey) {
+        setSelectedDateState((cur) => (cur !== route.dateKey ? route.dateKey! : cur));
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const activeRecord = records[selectedDate] || null;
   const hasSampleData = Object.values(records).some((r) => r.isSampleData);
 
-  const selectYear = useCallback((newYear: number) => {
-    setYear(newYear);
-    setScreen('month');
+  const setScreen = useCallback((newScreen: ScreenMode) => {
+    setScreenState((current) => {
+      if (current !== newScreen) {
+        setPreviousScreen(current);
+        return newScreen;
+      }
+      return current;
+    });
   }, []);
 
+  const selectYear = useCallback((newYear: number) => {
+    setYearState(newYear);
+    setScreen('month');
+  }, [setScreen]);
+
   const selectMonth = useCallback((newMonth: number) => {
-    setMonth(newMonth);
+    setMonthState(newMonth);
     const currentDateParts = parseDateKey(selectedDate);
     const safeDay = Math.min(currentDateParts.day, 28);
-    setSelectedDate(formatDateKey(year, newMonth, safeDay));
+    setSelectedDateState(formatDateKey(year, newMonth, safeDay));
     setScreen('calendar');
-  }, [year, selectedDate]);
+  }, [year, selectedDate, setScreen]);
 
   const selectDate = useCallback((dateKey: string) => {
-    setSelectedDate(dateKey);
+    setSelectedDateState(dateKey);
     const parts = parseDateKey(dateKey);
-    setYear(parts.year);
-    setMonth(parts.month);
+    setYearState(parts.year);
+    setMonthState(parts.month);
   }, []);
 
   const goToToday = useCallback(() => {
     const today = getTodayDateKey();
     const parts = parseDateKey(today);
-    setYear(parts.year);
-    setMonth(parts.month);
-    setSelectedDate(today);
+    setYearState(parts.year);
+    setMonthState(parts.month);
+    setSelectedDateState(today);
     setScreen('calendar');
-  }, []);
+  }, [setScreen]);
 
   const navigateToCalendar = useCallback(() => {
     setScreen('calendar');
-  }, []);
+  }, [setScreen]);
 
   const navigateToMonths = useCallback(() => {
     setScreen('month');
-  }, []);
+  }, [setScreen]);
 
   const navigateToYears = useCallback(() => {
     setScreen('year');
-  }, []);
+  }, [setScreen]);
 
   const navigateToAnalytics = useCallback(() => {
     setScreen('analytics');
-  }, []);
+  }, [setScreen]);
 
   const navigateToJournal = useCallback((dateKey?: string) => {
     if (dateKey) {
-      setSelectedDate(dateKey);
+      setSelectedDateState(dateKey);
       const parts = parseDateKey(dateKey);
-      setYear(parts.year);
-      setMonth(parts.month);
+      setYearState(parts.year);
+      setMonthState(parts.month);
     }
     setScreen('daily');
-  }, []);
+  }, [setScreen]);
 
   const navigateToSearch = useCallback(() => {
     setScreen('search');
-  }, []);
+  }, [setScreen]);
 
   const openCategoryAnalytics = useCallback((category: ActivityCategory) => {
     setActiveCategoryModal(category);
@@ -216,6 +274,7 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     <LifeOSContext.Provider
       value={{
         screen,
+        previousScreen,
         year,
         month,
         selectedDate,

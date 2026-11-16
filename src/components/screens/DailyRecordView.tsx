@@ -7,6 +7,7 @@ import {
   Edit3,
   Sparkles,
   Plus,
+  ArrowLeft,
 } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -39,6 +40,8 @@ export const DailyRecordView: React.FC = () => {
     selectDate,
     records,
     openQuickCapture,
+    previousScreen,
+    navigateToSearch,
   } = useLifeOS();
   const { reducedMotion } = useTheme();
 
@@ -170,6 +173,17 @@ export const DailyRecordView: React.FC = () => {
   return (
     <div className="w-full min-h-[calc(100vh-3.5rem)] bg-[#090A0C] dark:bg-[#090A0C] light:bg-[#FCFCFC] text-white dark:text-white light:text-neutral-900 select-text pb-24 transition-colors">
       <div className="max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+        {/* Breadcrumb Return to Search if arrived from Search */}
+        {previousScreen === 'search' && (
+          <button
+            onClick={navigateToSearch}
+            className="inline-flex items-center gap-2 text-xs font-mono text-[#FF7138] hover:text-[#FF8D5C] transition-colors cursor-pointer group -mb-4"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
+            <span>&larr; Return to Search Results</span>
+          </button>
+        )}
+
         {/* Temporal Day Pagination Header (Concept Panel 5) */}
         <div className="flex items-center justify-between pb-4 border-b border-[#1A1F26] dark:border-[#1A1F26] light:border-neutral-200">
           <div className="flex items-center gap-3">

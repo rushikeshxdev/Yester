@@ -161,6 +161,7 @@ export interface DailyRecord {
   health?: HealthEntry;
   reflection?: DailyReflection;
   summary?: string;
+  coverImage?: string;
   isSampleData?: boolean;
   createdAt: string;
   updatedAt: string;

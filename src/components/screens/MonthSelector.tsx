@@ -1,13 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getAllMonthsForYear } from '../../services/calendarService';
-import { padZero } from '../../utils/dateUtils';
-import { Badge } from '../common/Badge';
-
-const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+import { padZero, getDaysInMonth, formatDateKey } from '../../utils/dateUtils';
 
 export const MonthSelector: React.FC = () => {
   const { year, selectMonth, navigateToYears, records } = useLifeOS();
@@ -33,43 +30,75 @@ export const MonthSelector: React.FC = () => {
     0
   );
 
+  // Computes a 5-bar sparkline representing the month's chronological recording density
+  const getMonthSparkline = (monthNum: number) => {
+    const daysInMonth = getDaysInMonth(year, monthNum);
+    const binCount = 5;
+    const binSize = Math.ceil(daysInMonth / binCount);
+    const bins = [0, 0, 0, 0, 0];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = formatDateKey(year, monthNum, d);
+      const rec = records[key];
+      if (
+        rec &&
+        (rec.work.length > 0 ||
+          rec.fitness.length > 0 ||
+          rec.learning.length > 0 ||
+          rec.projects.length > 0 ||
+          rec.personal.length > 0 ||
+          !!rec.health ||
+          !!rec.reflection)
+      ) {
+        const binIdx = Math.min(Math.floor((d - 1) / binSize), binCount - 1);
+        bins[binIdx]++;
+      }
+    }
+
+    const maxBin = Math.max(...bins, 1);
+    return bins.map((val) => ({
+      val,
+      heightPct: val > 0 ? Math.max(Math.round((val / maxBin) * 100), 22) : 10,
+    }));
+  };
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-10">
-      {/* Editorial Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-8 border-b border-[#1E1E1E] dark:border-[#1E1E1E] light:border-[#E5E5E2]">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-10">
+      {/* Editorial Header (Matching Concept Screen 2) */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8 pb-6 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
         <div>
           <button
             onClick={navigateToYears}
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-500 light:hover:text-black mb-3 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-500 light:hover:text-black mb-3 transition-colors cursor-pointer group"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
             <span>Select another year</span>
           </button>
 
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-5xl sm:text-6xl font-serif font-normal tracking-tight text-white dark:text-white light:text-neutral-900">
-              {year}
-            </h1>
-            <span className="text-sm font-serif italic text-neutral-400 dark:text-neutral-500 light:text-neutral-500">
-              Annual Chronicle
-            </span>
-          </div>
-          <p className="text-xs font-mono text-neutral-500 dark:text-neutral-500 light:text-neutral-500 mt-2">
-            Twelve temporal divisions preserving your personal, physical, and intellectual path.
+          <h1 className="text-4xl sm:text-5xl font-serif font-normal tracking-tight text-white dark:text-white light:text-neutral-900 leading-none">
+            {year}
+          </h1>
+          <p className="text-sm font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600 mt-2">
+            Select a month to explore your journey
           </p>
         </div>
 
         {/* Annual Snapshot Metrics */}
         <div className="flex items-center gap-6 text-xs font-mono text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
           <div>
-            <span className="text-[10px] uppercase text-neutral-500 block mb-0.5">Active Days</span>
+            <span className="text-[10px] uppercase text-neutral-500 block mb-0.5 tracking-wider">
+              Active Days
+            </span>
             <span className="text-base font-semibold text-white dark:text-white light:text-neutral-900">
-              {totalActiveDaysYear} <span className="text-[11px] font-normal text-neutral-500">/ 365</span>
+              {totalActiveDaysYear}{' '}
+              <span className="text-[11px] font-normal text-neutral-500">/ 365</span>
             </span>
           </div>
-          <div className="h-6 w-[1px] bg-neutral-800 dark:bg-[#252525] light:bg-neutral-300" />
+          <div className="h-6 w-[1px] bg-[#232934] dark:bg-[#232934] light:bg-neutral-300" />
           <div>
-            <span className="text-[10px] uppercase text-neutral-500 block mb-0.5">Total Records</span>
+            <span className="text-[10px] uppercase text-neutral-500 block mb-0.5 tracking-wider">
+              Total Entries
+            </span>
             <span className="text-base font-semibold text-white dark:text-white light:text-neutral-900">
               {totalEntriesYear}
             </span>
@@ -77,86 +106,74 @@ export const MonthSelector: React.FC = () => {
         </div>
       </div>
 
-      {/* 12-Month Architectural Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* 12-Month Architectural Grid (4 Columns x 3 Rows - Concept Screen 2) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {months.map((m, index) => {
-          const isThisMonth = isCurrentYear && m.month === currentMonthNum;
-          const romanNumeral = ROMAN_NUMERALS[m.month - 1];
+          const isFocusedMonth = isCurrentYear ? m.month === currentMonthNum : m.month === 6;
+          const sparkline = getMonthSparkline(m.month);
 
           return (
             <motion.div
               key={m.month}
-              initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+              initial={reducedMotion ? false : { opacity: 0, y: 8 }}
               animate={reducedMotion ? false : { opacity: 1, y: 0 }}
               transition={{
-                duration: reducedMotion ? 0.05 : 0.22,
-                delay: reducedMotion ? 0 : index * 0.015,
-                ease: [0.16, 1, 0.3, 1],
+                duration: reducedMotion ? 0.05 : 0.2,
+                delay: reducedMotion ? 0 : index * 0.012,
               }}
               onClick={() => selectMonth(m.month)}
-              className={`group relative p-6 rounded-lg border transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[175px] ${
-                isThisMonth
-                  ? 'bg-[#101010] dark:bg-[#101010] light:bg-neutral-50 border-neutral-400 dark:border-neutral-500 light:border-neutral-400 shadow-md ring-1 ring-neutral-400/30'
-                  : 'bg-[#0B0B0B] dark:bg-[#0B0B0B] light:bg-white hover:bg-[#111111] dark:hover:bg-[#111111] light:hover:bg-neutral-50/80 border-[#1F1F1F] dark:border-[#1F1F1F] light:border-[#E5E5E2] hover:border-neutral-500 dark:hover:border-neutral-500 light:hover:border-neutral-400 shadow-sm'
+              className={`group relative p-5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[148px] select-none ${
+                isFocusedMonth
+                  ? 'bg-[#12151B] dark:bg-[#12151B] light:bg-white border-[#FF7138] shadow-[0_0_25px_rgba(255,113,56,0.18)]'
+                  : 'bg-[#0E1116] dark:bg-[#0E1116] light:bg-white hover:bg-[#13171E] dark:hover:bg-[#13171E] light:hover:bg-neutral-50 border-[#1F2530] dark:border-[#1F2530] light:border-neutral-200 hover:border-[#2D3645] dark:hover:border-[#2D3645] light:hover:border-neutral-300 shadow-sm'
               }`}
             >
-              {/* Top row: Chapter Roman Numeral, Days count, Status */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#181818] dark:border-[#181818] light:border-neutral-100">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono font-semibold tracking-wider text-neutral-500 dark:text-neutral-500 light:text-neutral-400">
-                    PART {romanNumeral}
-                  </span>
-                  <span className="text-neutral-600 dark:text-neutral-700 light:text-neutral-300">&bull;</span>
-                  <span className="text-[11px] font-mono text-neutral-400 dark:text-neutral-500 light:text-neutral-500">
-                    #{padZero(m.month)}
-                  </span>
-                </div>
+              {/* Card Header: Month Number (01, 02, etc.) */}
+              <div className="flex items-center justify-between">
+                <span
+                  className={`text-xs font-mono font-medium tracking-wider ${
+                    isFocusedMonth
+                      ? 'text-[#FF7138]'
+                      : 'text-neutral-500 dark:text-neutral-500 light:text-neutral-400'
+                  }`}
+                >
+                  {padZero(m.month)}
+                </span>
 
-                <div className="flex items-center gap-2">
-                  {isThisMonth && (
-                    <Badge variant="active" size="sm">
-                      Current
-                    </Badge>
-                  )}
-                  <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-500 light:text-neutral-400">
-                    {m.daysCount} days
-                  </span>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white dark:group-hover:text-white light:group-hover:text-black transition-colors" />
-                </div>
+                {isFocusedMonth && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF7138] animate-pulse" />
+                )}
               </div>
 
-              {/* Middle row: Month Name in Editorial Serif */}
-              <div className="py-4">
-                <h2 className="text-3xl font-serif font-normal tracking-tight text-white dark:text-white light:text-neutral-900 group-hover:translate-x-1 transition-transform duration-200">
+              {/* Month Name */}
+              <div className="my-auto pt-2">
+                <h2 className="text-xl sm:text-2xl font-serif text-white dark:text-white light:text-neutral-900 group-hover:translate-x-0.5 transition-transform">
                   {m.monthName}
                 </h2>
               </div>
 
-              {/* Bottom row: Real Activity Indicators */}
-              <div className="pt-3 border-t border-[#181818] dark:border-[#181818] light:border-neutral-100 flex items-center justify-between text-xs font-mono">
-                {m.hasActivity ? (
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 text-neutral-300 dark:text-neutral-300 light:text-neutral-700 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white dark:bg-white light:bg-black animate-pulse" />
-                      <span>{m.totalRecordsCount} {m.totalRecordsCount === 1 ? 'day' : 'days'} documented</span>
-                    </div>
-
-                    <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-neutral-500">
-                      {m.categoryCounts.work > 0 && <span title="Work">W:{m.categoryCounts.work}</span>}
-                      {m.categoryCounts.fitness > 0 && <span title="Fitness">F:{m.categoryCounts.fitness}</span>}
-                      {m.categoryCounts.learning > 0 && <span title="Learning">L:{m.categoryCounts.learning}</span>}
-                    </div>
-                  </div>
-                ) : (
-                  <span className="text-neutral-600 dark:text-neutral-600 light:text-neutral-400 text-[11px] italic font-serif">
-                    Unwritten chapter
-                  </span>
-                )}
-
-                <span className="text-neutral-500 dark:text-neutral-500 light:text-neutral-400 text-[11px] group-hover:text-white dark:group-hover:text-white light:group-hover:text-black transition-colors flex items-center gap-1">
-                  <span>Explore</span>
-                  <span>&rarr;</span>
+              {/* Card Footer: Days Count (Left) + 5-Bar Activity Sparkline (Right) */}
+              <div className="flex items-end justify-between pt-3 border-t border-[#181D26] dark:border-[#181D26] light:border-neutral-100">
+                <span className="text-xs font-mono text-neutral-400 dark:text-neutral-400 light:text-neutral-500">
+                  {m.totalRecordsCount} {m.totalRecordsCount === 1 ? 'day' : 'days'}
                 </span>
+
+                {/* Concept Mini Sparkline Histogram */}
+                <div className="flex items-end gap-1 h-5" title={`${m.totalRecordsCount} active days in ${m.monthName}`}>
+                  {sparkline.map((bar, barIdx) => (
+                    <div
+                      key={barIdx}
+                      style={{ height: `${bar.heightPct}%` }}
+                      className={`w-1 rounded-sm transition-all duration-300 ${
+                        isFocusedMonth
+                          ? 'bg-[#FF7138]'
+                          : bar.val > 0
+                          ? 'bg-neutral-400 dark:bg-neutral-500 light:bg-neutral-400 group-hover:bg-[#FF7138]'
+                          : 'bg-[#222834] dark:bg-[#222834] light:bg-neutral-200'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
             </motion.div>
           );

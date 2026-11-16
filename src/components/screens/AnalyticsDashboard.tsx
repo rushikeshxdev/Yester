@@ -4,7 +4,9 @@ import {
   BarChart3,
   Trophy,
   ArrowUpRight,
+  ArrowDownRight,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
 import {
@@ -19,10 +21,11 @@ import {
   Cell,
 } from 'recharts';
 import { getMonthName } from '../../utils/dateUtils';
+import { ActivityCategory } from '../../types';
 
 type RangeOption = '1M' | '6M' | '1Y' | 'All';
 
-const CATEGORY_COLORS = {
+const CATEGORY_COLORS: Record<string, string> = {
   Work: '#FF7138',
   Fitness: '#4A72B2',
   Learning: '#3FB950',
@@ -31,15 +34,27 @@ const CATEGORY_COLORS = {
   Health: '#E25950',
 };
 
+const CATEGORY_MAP: Record<string, ActivityCategory> = {
+  Work: 'work',
+  Fitness: 'fitness',
+  Learning: 'learning',
+  Personal: 'personal',
+  Projects: 'project',
+  Health: 'health',
+};
+
 export const AnalyticsDashboard: React.FC = () => {
-  const { year, records, navigateToJournal } = useLifeOS();
+  const { year, records, navigateToJournal, openCategoryAnalytics } = useLifeOS();
   const [timeRange, setTimeRange] = useState<RangeOption>('1Y');
 
-  // Compute Year Analytics Metrics from actual records
+  // Compute Year Analytics Metrics from actual records with true period-over-period deltas
   const stats = useMemo(() => {
     let totalEntries = 0;
     let recordedDaysCount = 0;
     let totalMilestones = 0;
+
+    let priorRecordedDaysCount = 0;
+    let priorTotalMilestones = 0;
 
     let workCount = 0;
     let fitnessCount = 0;
@@ -47,6 +62,9 @@ export const AnalyticsDashboard: React.FC = () => {
     let personalCount = 0;
     let projectCount = 0;
     let healthCount = 0;
+
+    let thisYearDaysCount = 0;
+    let lastYearDaysCount = 0;
 
     const milestonesList: {
       date: string;
@@ -83,16 +101,26 @@ export const AnalyticsDashboard: React.FC = () => {
 
       const dayTotal = w + f + l + p + pr + h + r;
 
-      // Filter by range
+      // Track year over year growth
+      if (recYear === year && dayTotal > 0) thisYearDaysCount++;
+      if (recYear === year - 1 && dayTotal > 0) lastYearDaysCount++;
+
+      // Current Range vs Prior Range Filtering
       let inRange = false;
+      let inPriorRange = false;
+
       if (timeRange === 'All') {
         inRange = true;
       } else if (timeRange === '1Y') {
         inRange = recYear === year;
+        inPriorRange = recYear === year - 1;
       } else if (timeRange === '6M') {
         inRange = recYear === year && recMonth >= 7;
+        inPriorRange = recYear === year && recMonth >= 1 && recMonth <= 6;
       } else if (timeRange === '1M') {
-        inRange = recYear === year && recMonth === 6; // focused month
+        // Focused month: June (6) or active month
+        inRange = recYear === year && recMonth === 6;
+        inPriorRange = recYear === year && recMonth === 5;
       }
 
       if (inRange) {
@@ -108,7 +136,7 @@ export const AnalyticsDashboard: React.FC = () => {
         projectCount += pr;
         healthCount += h;
 
-        // Collect milestones from projects, work, or reflections
+        // Collect real milestones from projects, work, or reflections
         rec.projects?.forEach((proj) => {
           if (proj.progressPercentage === 100 || proj.tasksCompleted?.length) {
             totalMilestones++;
@@ -130,6 +158,21 @@ export const AnalyticsDashboard: React.FC = () => {
               category: 'Work',
               description: work.outcomeImpact,
             });
+          }
+        });
+      }
+
+      // Prior period tracking for true deltas
+      if (inPriorRange) {
+        if (dayTotal > 0) priorRecordedDaysCount++;
+        rec.projects?.forEach((proj) => {
+          if (proj.progressPercentage === 100 || proj.tasksCompleted?.length) {
+            priorTotalMilestones++;
+          }
+        });
+        rec.work?.forEach((work) => {
+          if (work.outcomeImpact) {
+            priorTotalMilestones++;
           }
         });
       }
@@ -157,6 +200,30 @@ export const AnalyticsDashboard: React.FC = () => {
       100
     );
 
+    const priorConsistencyRate =
+      priorRecordedDaysCount > 0
+        ? Math.min(Math.round((priorRecordedDaysCount / Math.max(daysEvaluated, 1)) * 100), 100)
+        : null;
+
+    // True dynamic delta calculations
+    const daysRecordedDeltaPct =
+      priorRecordedDaysCount > 0
+        ? Math.round(((recordedDaysCount - priorRecordedDaysCount) / priorRecordedDaysCount) * 100)
+        : null;
+
+    const consistencyDeltaPct =
+      priorConsistencyRate !== null ? consistencyRate - priorConsistencyRate : null;
+
+    const milestonesDelta =
+      priorTotalMilestones > 0 ? totalMilestones - priorTotalMilestones : null;
+
+    const growthTrendDeltaPct =
+      lastYearDaysCount > 0
+        ? Math.round(((thisYearDaysCount - lastYearDaysCount) / lastYearDaysCount) * 100)
+        : thisYearDaysCount > 0
+        ? 100
+        : 0;
+
     // Categories Distribution
     const categoryTotal =
       workCount + fitnessCount + learningCount + personalCount + projectCount + healthCount || 1;
@@ -164,33 +231,45 @@ export const AnalyticsDashboard: React.FC = () => {
     const categoriesBreakdown = [
       {
         name: 'Work',
+        categoryKey: CATEGORY_MAP.Work,
         value: workCount,
         pct: Math.round((workCount / categoryTotal) * 100),
         color: CATEGORY_COLORS.Work,
       },
       {
         name: 'Fitness',
+        categoryKey: CATEGORY_MAP.Fitness,
         value: fitnessCount,
         pct: Math.round((fitnessCount / categoryTotal) * 100),
         color: CATEGORY_COLORS.Fitness,
       },
       {
         name: 'Learning',
+        categoryKey: CATEGORY_MAP.Learning,
         value: learningCount,
         pct: Math.round((learningCount / categoryTotal) * 100),
         color: CATEGORY_COLORS.Learning,
       },
       {
         name: 'Personal',
+        categoryKey: CATEGORY_MAP.Personal,
         value: personalCount,
         pct: Math.round((personalCount / categoryTotal) * 100),
         color: CATEGORY_COLORS.Personal,
       },
       {
         name: 'Projects',
+        categoryKey: CATEGORY_MAP.Projects,
         value: projectCount,
         pct: Math.round((projectCount / categoryTotal) * 100),
         color: CATEGORY_COLORS.Projects,
+      },
+      {
+        name: 'Health',
+        categoryKey: CATEGORY_MAP.Health,
+        value: healthCount,
+        pct: Math.round((healthCount / categoryTotal) * 100),
+        color: CATEGORY_COLORS.Health,
       },
     ].filter((c) => c.value > 0);
 
@@ -203,18 +282,54 @@ export const AnalyticsDashboard: React.FC = () => {
       recordedDaysCount,
       consistencyRate,
       totalMilestones,
+      daysRecordedDeltaPct,
+      consistencyDeltaPct,
+      milestonesDelta,
+      growthTrendDeltaPct,
       normalizedMonthlyChart,
       categoriesBreakdown,
       recentMilestones,
     };
   }, [records, year, timeRange]);
 
+  // Renders dynamic delta badges (+X%, -X%, or Baseline)
+  const renderDeltaBadge = (delta: number | null, isPercentage = true) => {
+    if (delta === null) {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-400 bg-neutral-800/40 dark:bg-neutral-800/40 light:bg-neutral-200/60 px-2 py-0.5 rounded-full">
+          <span>Active</span>
+        </span>
+      );
+    }
+    if (delta > 0) {
+      return (
+        <span className="inline-flex items-center gap-0.5 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+          <ArrowUpRight className="w-3 h-3" />
+          <span>+{delta}{isPercentage ? '%' : ''}</span>
+        </span>
+      );
+    }
+    if (delta < 0) {
+      return (
+        <span className="inline-flex items-center gap-0.5 text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+          <ArrowDownRight className="w-3 h-3" />
+          <span>{delta}{isPercentage ? '%' : ''}</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-400 bg-neutral-800/40 dark:bg-neutral-800/40 light:bg-neutral-200/60 px-2 py-0.5 rounded-full">
+        <span>0%</span>
+      </span>
+    );
+  };
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8 select-none">
-      {/* Header Banner: Your Journey in {year} */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-8 select-none">
+      {/* Editorial Dashboard Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-serif font-normal tracking-tight text-white dark:text-white light:text-neutral-900">
+          <h1 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
             Your Journey in {year}
           </h1>
           <p className="text-sm font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600 mt-1">
@@ -230,7 +345,7 @@ export const AnalyticsDashboard: React.FC = () => {
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[#FF7138] text-white shadow-orange-sm'
                     : 'text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black'
@@ -243,7 +358,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards Row (Matching Concept Panel 4: 3 Cards) */}
+      {/* KPI Cards Row (Concept Panel 4: 3 Cards with Real Mathematical Deltas) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Card 1: Days Recorded */}
         <div className="p-6 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-sm relative overflow-hidden group hover:border-[#2A313D] transition-colors">
@@ -251,10 +366,7 @@ export const AnalyticsDashboard: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[#161A22] border border-[#232934] flex items-center justify-center text-[#FF7138]">
               <CalendarIcon className="w-5 h-5" />
             </div>
-            <span className="inline-flex items-center gap-1 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              <ArrowUpRight className="w-3 h-3" />
-              <span>+12%</span>
-            </span>
+            {renderDeltaBadge(stats.daysRecordedDeltaPct)}
           </div>
           <div className="space-y-0.5">
             <h3 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
@@ -272,10 +384,7 @@ export const AnalyticsDashboard: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[#161A22] border border-[#232934] flex items-center justify-center text-[#FF7138]">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <span className="inline-flex items-center gap-1 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              <ArrowUpRight className="w-3 h-3" />
-              <span>+8%</span>
-            </span>
+            {renderDeltaBadge(stats.consistencyDeltaPct)}
           </div>
           <div className="space-y-0.5">
             <h3 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
@@ -293,17 +402,14 @@ export const AnalyticsDashboard: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[#161A22] border border-[#232934] flex items-center justify-center text-[#FF7138]">
               <Trophy className="w-5 h-5" />
             </div>
-            <span className="inline-flex items-center gap-1 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              <ArrowUpRight className="w-3 h-3" />
-              <span>+3</span>
-            </span>
+            {renderDeltaBadge(stats.milestonesDelta, false)}
           </div>
           <div className="space-y-0.5">
             <h3 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              {stats.totalMilestones || 12}
+              {stats.totalMilestones}
             </h3>
             <p className="text-xs font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
-              Total Milestones
+              Documented Milestones
             </p>
           </div>
         </div>
@@ -334,42 +440,41 @@ export const AnalyticsDashboard: React.FC = () => {
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
             >
               <defs>
-                <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#FF7138" stopOpacity={0.35} />
                   <stop offset="95%" stopColor="#FF7138" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
               <XAxis
                 dataKey="name"
-                stroke="#4A5260"
-                fontSize={11}
-                tickLine={false}
-                axisLine={{ stroke: '#1E232B' }}
-              />
-              <YAxis
-                stroke="#4A5260"
+                stroke="#475161"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(val) => `${val}%`}
+              />
+              <YAxis
+                stroke="#475161"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
                 domain={[0, 100]}
-                ticks={[0, 25, 50, 75, 100]}
+                unit="%"
               />
               <Tooltip
-                content={({ active, payload }) => {
+                content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="p-3 rounded-xl bg-[#13161A] border border-[#232830] text-xs font-sans text-white shadow-xl space-y-1">
-                        <div className="font-semibold text-[#FF7138]">
-                          {getMonthName(data.monthIndex)}
-                        </div>
-                        <div className="text-neutral-300 font-mono">
+                      <div className="p-3 rounded-xl bg-[#12151B] border border-[#232934] text-xs font-mono shadow-xl space-y-1">
+                        <p className="font-semibold text-white">
+                          {label} ({year})
+                        </p>
+                        <p className="text-[#FF7138]">
                           {data.entries} total entries logged
-                        </div>
-                        <div className="text-neutral-500 font-mono text-[10px]">
+                        </p>
+                        <p className="text-neutral-400">
                           {data.recordedDays} active days
-                        </div>
+                        </p>
                       </div>
                     );
                   }
@@ -382,47 +487,50 @@ export const AnalyticsDashboard: React.FC = () => {
                 stroke="#FF7138"
                 strokeWidth={2.5}
                 fillOpacity={1}
-                fill="url(#activityGradient)"
-                activeDot={{
-                  r: 6,
-                  fill: '#FF7138',
-                  stroke: '#FFFFFF',
-                  strokeWidth: 2,
-                }}
+                fill="url(#colorActivity)"
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Bottom Row: Top Categories & Growth Trend (Concept Panel 4) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Top Categories: Donut Chart + Horizontal Progress Bars */}
+      {/* Two Column Section: Top Categories (Left) & Growth Trend (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Top Categories: Donut Chart + Clickable Progress Bars */}
         <div className="lg:col-span-7 p-6 sm:p-7 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl space-y-6">
           <div className="flex items-center justify-between pb-2 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
-            <h3 className="text-lg font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              Top Categories
-            </h3>
-            <span className="text-xs font-mono text-neutral-400">
-              Distribution across pillars
-            </span>
+            <div>
+              <h3 className="text-lg font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
+                Top Categories
+              </h3>
+              <span className="text-xs font-mono text-neutral-400">
+                Click any category to open deep dossier
+              </span>
+            </div>
+            <Sparkles className="w-4 h-4 text-[#FF7138]" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
-            {/* Progress Bars (Left) */}
+            {/* Clickable Progress Bars (Left) */}
             <div className="sm:col-span-7 space-y-3.5">
               {stats.categoriesBreakdown.map((cat) => (
-                <div key={cat.name} className="space-y-1.5">
+                <div
+                  key={cat.name}
+                  onClick={() => openCategoryAnalytics(cat.categoryKey)}
+                  className="space-y-1.5 p-2 -mx-2 rounded-xl hover:bg-white/5 dark:hover:bg-white/5 light:hover:bg-black/5 transition-colors cursor-pointer group"
+                  title={`Open ${cat.name} telemetry dossier`}
+                >
                   <div className="flex items-center justify-between text-xs font-sans">
-                    <span className="flex items-center gap-2 text-neutral-300 dark:text-neutral-300 light:text-neutral-700">
+                    <span className="flex items-center gap-2 text-neutral-300 dark:text-neutral-300 light:text-neutral-700 group-hover:text-white dark:group-hover:text-white light:group-hover:text-black transition-colors">
                       <span
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: cat.color }}
                       />
-                      {cat.name}
+                      <span className="font-medium">{cat.name}</span>
                     </span>
-                    <span className="font-mono text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
-                      {cat.pct}%
+                    <span className="font-mono text-neutral-400 dark:text-neutral-400 light:text-neutral-600 flex items-center gap-1">
+                      <span>{cat.pct}%</span>
+                      <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-[#181D24] overflow-hidden">
@@ -438,19 +546,24 @@ export const AnalyticsDashboard: React.FC = () => {
               ))}
             </div>
 
-            {/* Donut Chart (Right) */}
-            <div className="sm:col-span-5 h-44 flex items-center justify-center relative">
+            {/* Recharts Donut Pie Chart (Right) */}
+            <div className="sm:col-span-5 h-48 relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={stats.categoriesBreakdown}
-                    innerRadius={48}
-                    outerRadius={68}
-                    paddingAngle={4}
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={3}
                     dataKey="value"
                   >
                     {stats.categoriesBreakdown.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => openCategoryAnalytics(entry.categoryKey)}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
@@ -473,7 +586,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 <span className="text-[10px] font-mono uppercase text-neutral-500">
                   Total
                 </span>
-                <span className="text-sm font-mono font-semibold text-white">
+                <span className="text-sm font-mono font-semibold text-white dark:text-white light:text-neutral-900">
                   {stats.totalEntries}
                 </span>
               </div>
@@ -493,7 +606,7 @@ export const AnalyticsDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-baseline gap-3">
               <span className="text-4xl sm:text-5xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-                +18%
+                {stats.growthTrendDeltaPct > 0 ? `+${stats.growthTrendDeltaPct}%` : `${stats.growthTrendDeltaPct}%`}
               </span>
               <span className="text-xs font-sans text-neutral-400">
                 recording consistency delta
@@ -533,55 +646,56 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Milestones Timeline (Direct Record Exploration) */}
-      <div className="p-6 sm:p-7 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl space-y-5">
+      {/* Recent Milestones List (Concept Panel 4) */}
+      <div className="p-6 sm:p-7 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-[#FF7138]" />
+          <div>
             <h3 className="text-lg font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              Archived Milestones & Achievements
+              Recent Milestones & Outcomes
             </h3>
+            <p className="text-xs font-sans text-neutral-400">
+              Significant achievements documented in your chronicle
+            </p>
           </div>
-          <span className="text-xs font-mono text-neutral-400">Chronological history</span>
+          <Trophy className="w-4 h-4 text-[#FF7138]" />
         </div>
 
-        {stats.recentMilestones.length > 0 ? (
-          <div className="divide-y divide-[#1A1F26] dark:divide-[#1A1F26] light:divide-neutral-200">
-            {stats.recentMilestones.map((milestone, idx) => (
+        <div className="space-y-3 pt-2">
+          {stats.recentMilestones.length > 0 ? (
+            stats.recentMilestones.map((m, idx) => (
               <div
-                key={`${milestone.date}-${idx}`}
-                onClick={() => navigateToJournal(milestone.date)}
-                className="py-3.5 flex items-center justify-between gap-4 group cursor-pointer hover:bg-[#14181E] px-3 -mx-3 rounded-xl transition-colors"
+                key={idx}
+                onClick={() => navigateToJournal(m.date)}
+                className="p-3.5 sm:p-4 rounded-xl bg-[#12161C] dark:bg-[#12161C] light:bg-white border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 flex items-center justify-between gap-4 hover:border-[#2D3645] transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-[#FF7138] bg-[#FF7138]/10 px-2 py-0.5 rounded">
-                    {milestone.date}
-                  </span>
+                  <div className="w-8 h-8 rounded-lg bg-[#181D26] flex items-center justify-center text-[#FF7138]">
+                    <Trophy className="w-4 h-4" />
+                  </div>
                   <div>
-                    <h4 className="text-sm font-sans font-medium text-white group-hover:text-[#FF7138] transition-colors">
-                      {milestone.title}
+                    <h4 className="text-xs sm:text-sm font-medium text-white dark:text-white light:text-neutral-900 group-hover:text-[#FF7138] transition-colors">
+                      {m.title}
                     </h4>
-                    <p className="text-xs font-sans text-neutral-400 line-clamp-1">
-                      {milestone.description}
+                    <p className="text-[11px] font-sans text-neutral-400 line-clamp-1">
+                      {m.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-neutral-500">
-                    {milestone.category}
+                <div className="flex items-center gap-2 text-right shrink-0">
+                  <span className="text-[11px] font-mono text-neutral-400">
+                    {m.date}
                   </span>
-                  <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:translate-x-1 group-hover:text-white transition-all" />
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white transition-colors" />
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs font-sans text-neutral-500 py-4 italic">
-            No milestones documented yet. Add milestones in your daily entries to track your
-            victories here.
-          </p>
-        )}
+            ))
+          ) : (
+            <div className="py-8 text-center text-xs font-mono text-neutral-500">
+              No milestones logged yet. Complete tasks or document impact outcomes in your daily journal.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

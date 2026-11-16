@@ -5,9 +5,10 @@ import {
   ChevronRight,
   Trash2,
   Edit3,
-  Sparkles,
   Plus,
   ArrowLeft,
+  Camera,
+  X,
 } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -34,6 +35,39 @@ import { HealthSection } from '../daily/HealthSection';
 import { ReflectionSection } from '../daily/ReflectionSection';
 import { DailyEntryModal } from '../daily/DailyEntryModal';
 
+const COVER_PRESETS = [
+  {
+    id: 'sunset',
+    label: 'Sunset Skyline',
+    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'mountains',
+    label: 'Misty Mountains',
+    url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'desk',
+    label: 'Studio Workspace',
+    url: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'library',
+    label: 'Classic Library',
+    url: 'https://images.unsplash.com/photo-1507842229452-9f66679234b6?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'cafe',
+    label: 'Rainy Café',
+    url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'forest',
+    label: 'Pine Forest',
+    url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80',
+  },
+];
+
 export const DailyRecordView: React.FC = () => {
   const {
     selectedDate,
@@ -52,6 +86,10 @@ export const DailyRecordView: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState<ActivityCategory | 'reflection'>('work');
   const [editingEntry, setEditingEntry] = useState<any>(null);
+
+  // Cover image modal state
+  const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
+  const [customCoverUrl, setCustomCoverUrl] = useState('');
 
   // Inline headline editing
   const [isEditingHeadline, setIsEditingHeadline] = useState(false);
@@ -129,6 +167,22 @@ export const DailyRecordView: React.FC = () => {
       ...record.health,
       habits: updatedHabits,
     });
+  };
+
+  const handleSelectCover = (url: string) => {
+    saveDailyRecord({
+      ...record,
+      coverImage: url,
+    });
+    setIsCoverModalOpen(false);
+  };
+
+  const handleSaveCustomCover = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customCoverUrl.trim()) {
+      handleSelectCover(customCoverUrl.trim());
+      setCustomCoverUrl('');
+    }
   };
 
   // Category counts for the pill bar (Concept Panel 5)
@@ -278,18 +332,22 @@ export const DailyRecordView: React.FC = () => {
           </div>
 
           {/* Right Column: Visual Memory Cover (Concept Panel 5) */}
-          <div className="md:col-span-5 h-40 rounded-xl overflow-hidden relative group border border-[#222731] shadow-inner bg-[#14181F]">
-            {/* Ambient aesthetic sunset skyline memory image */}
+          <div
+            onClick={() => setIsCoverModalOpen(true)}
+            className="md:col-span-5 h-40 rounded-xl overflow-hidden relative group border border-[#222731] shadow-inner bg-[#14181F] cursor-pointer"
+            title="Click to personalize cover visual"
+          >
+            {/* Ambient aesthetic memory image */}
             <img
-              src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
+              src={record.coverImage || COVER_PRESETS[0].url}
               alt="Day Memory Cover"
               className="w-full h-full object-cover brightness-75 group-hover:scale-105 group-hover:brightness-90 transition-all duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
             <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[10px] font-mono text-white/90">
               <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-[#FF7138]" />
-                <span>Visual Memory</span>
+                <Camera className="w-3 h-3 text-[#FF7138]" />
+                <span>Personalize Visual</span>
               </span>
               <span className="opacity-75">{selectedDate}</span>
             </div>
@@ -404,6 +462,77 @@ export const DailyRecordView: React.FC = () => {
         category={modalCategory}
         existingEntry={editingEntry}
       />
+
+      {/* Cover Image Personalization Modal */}
+      {isCoverModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none">
+          <div
+            className="w-full max-w-lg rounded-2xl bg-[#0D0F13] dark:bg-[#0D0F13] light:bg-white border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-2xl p-6 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#1A1F26] dark:border-[#1A1F26] light:border-neutral-200">
+              <div>
+                <h3 className="text-base font-serif text-white dark:text-white light:text-neutral-900">
+                  Personalize Day Cover Visual
+                </h3>
+                <p className="text-xs font-mono text-neutral-400">
+                  Select an atmospheric curation or paste your own URL
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCoverModalOpen(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Presets Grid */}
+            <div className="grid grid-cols-3 gap-2.5">
+              {COVER_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handleSelectCover(preset.url)}
+                  className="group relative h-20 rounded-xl overflow-hidden border border-[#222833] dark:border-[#222833] light:border-neutral-200 hover:border-[#FF7138] transition-all cursor-pointer"
+                >
+                  <img
+                    src={preset.url}
+                    alt={preset.label}
+                    className="w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-end p-1.5">
+                    <span className="text-[10px] font-sans text-white/90 line-clamp-1">
+                      {preset.label}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom URL Input */}
+            <form onSubmit={handleSaveCustomCover} className="pt-2 space-y-2">
+              <label className="text-xs font-mono text-neutral-400 dark:text-neutral-400 light:text-neutral-600 block">
+                Or Custom Image URL
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="url"
+                  value={customCoverUrl}
+                  onChange={(e) => setCustomCoverUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="flex-1 px-3 py-2 rounded-xl bg-[#14181F] dark:bg-[#14181F] light:bg-neutral-100 border border-[#232934] dark:border-[#232934] light:border-neutral-300 text-xs text-white dark:text-white light:text-neutral-900 focus:outline-none focus:border-[#FF7138]"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-[#FF7138] hover:bg-[#FF8352] text-white text-xs font-medium cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -75,46 +75,46 @@ export const CategoryDetailModal: React.FC = () => {
     <Modal
       isOpen={!!activeCategoryModal}
       onClose={closeCategoryAnalytics}
-      title={`${metric.categoryLabel} — ${monthName} ${year}`}
-      subtitle={`Detailed telemetry, activity logs, and historical trajectory`}
+      title={`${metric.categoryLabel} Dossier`}
+      subtitle={`${monthName} ${year} &bull; Growth Telemetry & Historical Log`}
       maxWidth="4xl"
     >
       <div className="space-y-6">
-        {/* Top KPI Cards */}
+        {/* Top Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-4 rounded-md border border-neutral-200 dark:border-[#262626] bg-neutral-50 dark:bg-[#181818]">
-            <div className="text-[11px] font-mono text-neutral-500 uppercase">
+          <div className="p-4 rounded-lg border border-[#222222] dark:border-[#222222] light:border-neutral-200 bg-[#101010] dark:bg-[#101010] light:bg-neutral-50">
+            <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
               {metric.metric1.label}
             </div>
-            <div className="text-2xl font-mono font-bold text-neutral-900 dark:text-white mt-1">
+            <div className="text-2xl font-serif font-normal text-white dark:text-white light:text-neutral-900 mt-1">
               {hasData ? metric.metric1.value : '0'}
             </div>
           </div>
 
-          <div className="p-4 rounded-md border border-neutral-200 dark:border-[#262626] bg-neutral-50 dark:bg-[#181818]">
-            <div className="text-[11px] font-mono text-neutral-500 uppercase">
+          <div className="p-4 rounded-lg border border-[#222222] dark:border-[#222222] light:border-neutral-200 bg-[#101010] dark:bg-[#101010] light:bg-neutral-50">
+            <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
               {metric.metric2.label}
             </div>
-            <div className="text-2xl font-mono font-bold text-neutral-900 dark:text-white mt-1">
+            <div className="text-2xl font-serif font-normal text-white dark:text-white light:text-neutral-900 mt-1">
               {hasData ? metric.metric2.value : '0'}
             </div>
           </div>
 
-          <div className="p-4 rounded-md border border-neutral-200 dark:border-[#262626] bg-neutral-50 dark:bg-[#181818]">
-            <div className="text-[11px] font-mono text-neutral-500 uppercase">
+          <div className="p-4 rounded-lg border border-[#222222] dark:border-[#222222] light:border-neutral-200 bg-[#101010] dark:bg-[#101010] light:bg-neutral-50">
+            <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
               {metric.metric3.label}
             </div>
-            <div className="text-2xl font-mono font-bold text-neutral-900 dark:text-white mt-1">
+            <div className="text-2xl font-serif font-normal text-white dark:text-white light:text-neutral-900 mt-1">
               {hasData ? metric.metric3.value : '0'}
             </div>
           </div>
         </div>
 
         {/* Chart View */}
-        <div className="p-4 rounded-md border border-neutral-200 dark:border-[#262626] bg-neutral-50/50 dark:bg-[#161616]">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono uppercase tracking-wider text-neutral-600 dark:text-neutral-400 font-semibold">
-              Daily Distribution (Days 1–31)
+        <div className="p-4 rounded-lg border border-[#202020] dark:border-[#202020] light:border-neutral-200 bg-[#0C0C0C] dark:bg-[#0C0C0C] light:bg-white">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#181818] dark:border-[#181818] light:border-neutral-100">
+            <span className="text-xs font-mono uppercase tracking-wider text-neutral-400 dark:text-neutral-400 light:text-neutral-600 font-semibold">
+              Daily Chronological Volume (Days 1–31)
             </span>
             <span className="text-[11px] font-mono text-neutral-500">
               {hasData ? `${metric.activeDaysCount} active days recorded` : 'No data recorded'}
@@ -133,7 +133,7 @@ export const CategoryDetailModal: React.FC = () => {
                       <stop
                         offset="5%"
                         stopColor={theme === 'dark' ? '#FFFFFF' : '#000000'}
-                        stopOpacity={0.25}
+                        stopOpacity={0.2}
                       />
                       <stop
                         offset="95%"
@@ -143,19 +143,19 @@ export const CategoryDetailModal: React.FC = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={theme === 'dark' ? '#262626' : '#E5E5E5'}
+                    strokeDasharray="2 2"
+                    stroke={theme === 'dark' ? '#202020' : '#ECECE9'}
                     vertical={false}
                   />
                   <XAxis
                     dataKey="day"
-                    stroke={theme === 'dark' ? '#666666' : '#999999'}
+                    stroke={theme === 'dark' ? '#555555' : '#999999'}
                     fontSize={10}
                     fontFamily="monospace"
                     tickLine={false}
                   />
                   <YAxis
-                    stroke={theme === 'dark' ? '#666666' : '#999999'}
+                    stroke={theme === 'dark' ? '#555555' : '#999999'}
                     fontSize={10}
                     fontFamily="monospace"
                     tickLine={false}
@@ -163,15 +163,15 @@ export const CategoryDetailModal: React.FC = () => {
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: theme === 'dark' ? '#141414' : '#FFFFFF',
-                      borderColor: theme === 'dark' ? '#2E2E2E' : '#E5E5E5',
-                      fontSize: '12px',
+                      backgroundColor: theme === 'dark' ? '#121212' : '#FFFFFF',
+                      borderColor: theme === 'dark' ? '#2A2A2A' : '#E2E2DF',
+                      fontSize: '11px',
                       fontFamily: 'monospace',
-                      borderRadius: '4px',
+                      borderRadius: '6px',
                       color: theme === 'dark' ? '#FFFFFF' : '#000000',
                     }}
                     labelFormatter={(day) => `Day ${day} (${monthName})`}
-                    formatter={(val) => [`${val} units/points`, 'Activity Metric']}
+                    formatter={(val) => [`${val} points/units`, 'Activity Volume']}
                   />
                   <Area
                     type="monotone"
@@ -185,9 +185,9 @@ export const CategoryDetailModal: React.FC = () => {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-44 flex flex-col items-center justify-center text-center p-6 border border-dashed border-neutral-300 dark:border-[#2C2C2C] rounded">
-              <AlertCircle className="w-8 h-8 text-neutral-400 mb-2" />
-              <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400">
+            <div className="h-40 flex flex-col items-center justify-center text-center p-6 border border-dashed border-[#262626] dark:border-[#262626] light:border-neutral-300 rounded">
+              <AlertCircle className="w-7 h-7 text-neutral-500 mb-2" />
+              <p className="text-xs font-mono text-neutral-400">
                 No telemetry recorded for {metric.categoryLabel} in {monthName} {year}.
               </p>
               <Button
@@ -203,17 +203,17 @@ export const CategoryDetailModal: React.FC = () => {
           )}
         </div>
 
-        {/* Detailed Activity Logs */}
+        {/* Detailed Chronological Ledger */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-xs font-mono uppercase tracking-widest text-neutral-500 font-semibold">
-              Chronological Logs ({activeEntriesByDate.length} days)
+              Chronological Entries ({activeEntriesByDate.length} days)
             </h4>
             <Button
               size="sm"
               variant="secondary"
               onClick={handleLogNew}
-              icon={<Plus className="w-3.5 h-3.5" />}
+              icon={<Plus className="w-3 h-3" />}
               className="text-xs font-mono"
             >
               Add Entry
@@ -228,17 +228,17 @@ export const CategoryDetailModal: React.FC = () => {
                 return (
                   <div
                     key={date}
-                    className="p-3.5 rounded-md border border-neutral-200 dark:border-[#262626] bg-white dark:bg-[#161616] hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors"
+                    className="p-3.5 rounded-lg border border-[#202020] dark:border-[#202020] light:border-neutral-200 bg-[#0F0F0F] dark:bg-[#0F0F0F] light:bg-neutral-50 hover:border-neutral-500 dark:hover:border-neutral-500 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-mono font-semibold text-neutral-900 dark:text-white">
+                      <span className="text-xs font-mono font-semibold text-white dark:text-white light:text-neutral-900">
                         {fullDateString}
                       </span>
                       <button
                         onClick={() => handleOpenDay(date)}
-                        className="text-[11px] font-mono text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1 transition-colors"
+                        className="text-[11px] font-mono text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black flex items-center gap-1 transition-colors"
                       >
-                        <span>Open Daily View</span>
+                        <span>Open Journal</span>
                         <ArrowUpRight className="w-3 h-3" />
                       </button>
                     </div>
@@ -247,12 +247,11 @@ export const CategoryDetailModal: React.FC = () => {
                       {entries.map((item, idx) => (
                         <div
                           key={item.id || idx}
-                          className="text-xs font-mono text-neutral-600 dark:text-neutral-300 pl-2 border-l-2 border-neutral-300 dark:border-[#333333]"
+                          className="text-xs font-mono text-neutral-400 dark:text-neutral-300 pl-2.5 border-l-2 border-neutral-700 dark:border-neutral-700 light:border-neutral-300"
                         >
-                          {/* Rendering preview depending on category */}
                           {activeCategoryModal === 'work' && (
                             <div>
-                              <div className="font-semibold text-neutral-900 dark:text-neutral-200">
+                              <div className="font-semibold text-white dark:text-white light:text-neutral-900">
                                 {item.organization} &bull; {item.project}
                               </div>
                               <div className="text-[11px] text-neutral-500 mt-0.5">
@@ -263,7 +262,7 @@ export const CategoryDetailModal: React.FC = () => {
 
                           {activeCategoryModal === 'fitness' && (
                             <div>
-                              <div className="font-semibold text-neutral-900 dark:text-neutral-200">
+                              <div className="font-semibold text-white dark:text-white light:text-neutral-900">
                                 {item.workoutType} ({item.workoutDurationMinutes}m) &bull;{' '}
                                 {item.muscleGroups?.join(', ')}
                               </div>
@@ -277,7 +276,7 @@ export const CategoryDetailModal: React.FC = () => {
 
                           {activeCategoryModal === 'learning' && (
                             <div>
-                              <div className="font-semibold text-neutral-900 dark:text-neutral-200">
+                              <div className="font-semibold text-white dark:text-white light:text-neutral-900">
                                 {item.subject}: {item.technologyOrConcept}
                               </div>
                               <div className="text-[11px] text-neutral-500 mt-0.5">
@@ -288,7 +287,7 @@ export const CategoryDetailModal: React.FC = () => {
 
                           {activeCategoryModal === 'project' && (
                             <div>
-                              <div className="font-semibold text-neutral-900 dark:text-neutral-200">
+                              <div className="font-semibold text-white dark:text-white light:text-neutral-900">
                                 {item.projectName}
                               </div>
                               <div className="text-[11px] text-neutral-500 mt-0.5">
@@ -299,7 +298,7 @@ export const CategoryDetailModal: React.FC = () => {
 
                           {activeCategoryModal === 'personal' && (
                             <div>
-                              <div className="font-semibold text-neutral-900 dark:text-neutral-200">
+                              <div className="font-semibold text-white dark:text-white light:text-neutral-900">
                                 {item.title}
                               </div>
                               <div className="text-[11px] text-neutral-500 mt-0.5">
@@ -310,12 +309,12 @@ export const CategoryDetailModal: React.FC = () => {
 
                           {activeCategoryModal === 'health' && (
                             <div>
-                              <div className="font-semibold text-neutral-900 dark:text-neutral-200">
+                              <div className="font-semibold text-white dark:text-white light:text-neutral-900">
                                 Sleep: {item.sleepHours} hrs &bull; Water: {item.waterIntakeLiters}L
                               </div>
                               <div className="text-[11px] text-neutral-500 mt-0.5">
-                                Habits completed: {item.habits?.filter((h: any) => h.completed).length || 0} /{' '}
-                                {item.habits?.length || 0}
+                                Habits: {item.habits?.filter((h: any) => h.completed).length || 0} /{' '}
+                                {item.habits?.length || 0} completed
                               </div>
                             </div>
                           )}
@@ -327,8 +326,8 @@ export const CategoryDetailModal: React.FC = () => {
               })}
             </div>
           ) : (
-            <div className="text-center py-6 text-neutral-500 dark:text-neutral-500 text-xs font-mono">
-              No daily entries to display.
+            <div className="text-center py-6 text-neutral-500 text-xs font-mono italic font-serif">
+              No entries logged in this domain for {monthName} {year}.
             </div>
           )}
         </div>

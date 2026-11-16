@@ -95,22 +95,22 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
       {
         id: 'proj-sample-1',
         date: todayKey,
-        projectName: 'LIFE OS (Personal Growth Kernel)',
-        objective: 'Construct a calendar-first, sovereign personal operating system preserving life history.',
+        projectName: 'Yester — Living Chronicle',
+        objective: 'A sovereign personal operating system and calendar-first living record preserving growth, achievements, and life history.',
         tasksCompleted: [
-          'Engineered full-screen year selector with snap-to-center physics.',
-          'Designed high-density responsive 12-month navigation grid.',
+          'Engineered full-screen year selector with snap-to-center physics and ambient depth.',
+          'Designed high-density responsive 12-month folio overview.',
           'Structured strict local-first data persistence schema with migration support.',
         ],
-        technicalImplementation: 'React + TypeScript + Tailwind CSS with pure CSS variable monochrome tokens and Framer Motion orchestration.',
-        decisions: 'Enforced absolute monochrome Swiss aesthetic without colorful distraction tokens.',
+        technicalImplementation: 'React + TypeScript + Tailwind CSS with pure editorial typography and Framer Motion orchestration.',
+        decisions: 'Enforced absolute monochrome Swiss & editorial aesthetic with Newsreader serif display typography.',
         blockers: 'None.',
-        progressPercentage: 45,
-        nextSteps: 'Complete deep category analytics drilldowns and rapid keyboard shortcuts.',
+        progressPercentage: 65,
+        nextSteps: 'Complete deep category telemetry dossiers and rapid keyboard interactions.',
         repositoryLinks: [
-          { id: 'repo-1', label: 'Repository: life-os', url: 'https://github.com/example/life-os' }
+          { id: 'repo-1', label: 'Repository: yester', url: 'https://github.com/example/yester' }
         ],
-        notes: 'The editorial typography gives the exact calm, contemplative feel needed for a life journal.',
+        notes: 'The editorial serif typography gives the exact contemplative feel needed for a life journal.',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -239,10 +239,10 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
       {
         id: 'proj-sample-2',
         date: twoDaysAgoKey,
-        projectName: 'LIFE OS',
+        projectName: 'Yester',
         objective: 'Draft core navigation architecture and screen state machines.',
         tasksCompleted: ['Implemented year-month-calendar route coordination.'],
-        progressPercentage: 25,
+        progressPercentage: 35,
         repositoryLinks: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

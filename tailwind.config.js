@@ -9,25 +9,36 @@ export default {
     extend: {
       colors: {
         dark: {
-          bg: '#0B0B0B',
-          surface: '#141414',
-          surfaceSecondary: '#1B1B1B',
+          bg: '#070707',
+          surface: '#0F0F0F',
+          surfaceSecondary: '#151515',
+          surfaceTertiary: '#1C1C1C',
           text: '#FFFFFF',
-          textSecondary: '#A0A0A0',
-          border: '#292929',
-          borderSubtle: '#1F1F1F',
+          textSecondary: '#A3A3A3',
+          textMuted: '#666666',
+          border: '#222222',
+          borderSubtle: '#181818',
         },
         light: {
-          bg: '#FFFFFF',
-          surface: '#F7F7F7',
-          surfaceSecondary: '#EFEFEF',
+          bg: '#FCFCFC',
+          surface: '#F5F5F3',
+          surfaceSecondary: '#ECECE9',
+          surfaceTertiary: '#E3E3DF',
           text: '#111111',
-          textSecondary: '#666666',
-          border: '#E5E5E5',
-          borderSubtle: '#EDEDED',
+          textSecondary: '#5A5A5A',
+          textMuted: '#8E8E8E',
+          border: '#E2E2DF',
+          borderSubtle: '#ECECE9',
         }
       },
       fontFamily: {
+        serif: [
+          'Newsreader',
+          'Georgia',
+          'Cambria',
+          'Times New Roman',
+          'serif',
+        ],
         sans: [
           'Inter',
           '-apple-system',
@@ -51,17 +62,18 @@ export default {
       letterSpacing: {
         tighter: '-0.04em',
         tight: '-0.02em',
+        normal: '0',
         wide: '0.04em',
         wider: '0.08em',
-        widest: '0.12em',
+        widest: '0.14em',
+        epic: '0.22em',
       },
       boxShadow: {
-        'subtle': '0 1px 3px 0 rgba(0, 0, 0, 0.3)',
-        'elevated': '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
-        'modal': '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.4)',
+        'elevated': '0 8px 24px -4px rgba(0, 0, 0, 0.5)',
+        'modal': '0 20px 45px -8px rgba(0, 0, 0, 0.7)',
       }
     },
   },
   plugins: [],
 }
-

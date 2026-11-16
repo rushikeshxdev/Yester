@@ -73,9 +73,9 @@ export const QuickCaptureModal: React.FC = () => {
       addOrUpdateWorkEntry(captureDate, {
         id: `work-${Date.now()}`,
         date: captureDate,
-        organization: workOrg.trim() || 'Core Engineering',
-        project: workProject.trim() || 'General Initiative',
-        tasksPerformed: workTask.trim() ? [workTask.trim()] : ['Progress recorded'],
+        organization: workOrg.trim() || 'Engineering Practice',
+        project: workProject.trim() || 'Core Initiative',
+        tasksPerformed: workTask.trim() ? [workTask.trim()] : ['Execution logged'],
         outcomeImpact: workOutcome.trim() || undefined,
         technologiesUsed: [],
         evidenceLinks: [],
@@ -111,8 +111,8 @@ export const QuickCaptureModal: React.FC = () => {
         id: `learn-${Date.now()}`,
         date: captureDate,
         subject: learnSubject.trim() || 'Computer Science',
-        technologyOrConcept: learnConcept.trim() || 'Core Theory',
-        learningSource: 'Self-Directed Reading',
+        technologyOrConcept: learnConcept.trim() || 'Foundations',
+        learningSource: 'Self-Directed Literature',
         studyDurationMinutes: Number(learnMinutes) || 30,
         notes: learnNotes.trim() || undefined,
         createdAt: timestamp,
@@ -124,8 +124,8 @@ export const QuickCaptureModal: React.FC = () => {
         id: `proj-${Date.now()}`,
         date: captureDate,
         projectName: projName.trim() || 'Active Initiative',
-        objective: 'Progress update',
-        tasksCompleted: projTask.trim() ? [projTask.trim()] : ['Milestone update'],
+        objective: 'Milestone progression',
+        tasksCompleted: projTask.trim() ? [projTask.trim()] : ['Progress updated'],
         progressPercentage: Number(projProgress) || 50,
         repositoryLinks: [],
         createdAt: timestamp,
@@ -138,7 +138,7 @@ export const QuickCaptureModal: React.FC = () => {
         date: captureDate,
         title: persTitle.trim() || 'Life Experience',
         type: 'experience',
-        description: persNotes.trim() || 'Personal life moment recorded.',
+        description: persNotes.trim() || 'Documented memory of the day.',
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -177,14 +177,14 @@ export const QuickCaptureModal: React.FC = () => {
     <Modal
       isOpen={quickCapture.isOpen}
       onClose={closeQuickCapture}
-      title="Rapid Life Capture"
-      subtitle="Instantly register growth, performance, or reflections"
+      title="Quick Capture"
+      subtitle="Instantly register a thought, workout, work task, or milestone"
       maxWidth="lg"
     >
       <div className="space-y-4 text-xs font-mono">
         {/* Date Selector Row */}
-        <div className="flex items-center justify-between p-2.5 rounded bg-neutral-50 dark:bg-[#1A1A1A] border border-neutral-200 dark:border-[#262626]">
-          <div className="flex items-center gap-2 text-neutral-500">
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#0F0F0F] dark:bg-[#0F0F0F] light:bg-neutral-50 border border-[#1E1E1E] dark:border-[#1E1E1E] light:border-neutral-200">
+          <div className="flex items-center gap-2 text-neutral-400">
             <Calendar className="w-3.5 h-3.5" />
             <span className="uppercase text-[10px] tracking-wider font-semibold">Target Date:</span>
           </div>
@@ -192,18 +192,19 @@ export const QuickCaptureModal: React.FC = () => {
             type="date"
             value={captureDate}
             onChange={(e) => setCaptureDate(e.target.value)}
-            className="px-2 py-1 rounded border border-neutral-300 dark:border-[#333333] bg-white dark:bg-[#111111] text-neutral-900 dark:text-white focus:outline-none"
+            className="px-2.5 py-1 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-[#161616] dark:bg-[#161616] light:bg-white text-white dark:text-white light:text-black focus:outline-none"
           />
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-6 gap-1 p-1 rounded-md bg-neutral-100 dark:bg-[#181818] border border-neutral-200 dark:border-[#222222]">
+        <div className="grid grid-cols-6 gap-1 p-1 rounded-md bg-[#121212] dark:bg-[#121212] light:bg-neutral-100 border border-[#1E1E1E] dark:border-[#1E1E1E] light:border-neutral-200">
           <button
             onClick={() => setTab('work')}
-            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${tab === 'work'
-                ? 'bg-white dark:bg-[#222222] text-black dark:text-white shadow-sm'
-                : 'text-neutral-500 hover:text-black dark:hover:text-white'
-              }`}
+            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${
+              tab === 'work'
+                ? 'bg-[#1E1E1E] dark:bg-[#1E1E1E] light:bg-white text-white dark:text-white light:text-black shadow-sm'
+                : 'text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
             <span>Work</span>
@@ -211,10 +212,11 @@ export const QuickCaptureModal: React.FC = () => {
 
           <button
             onClick={() => setTab('fitness')}
-            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${tab === 'fitness'
-                ? 'bg-white dark:bg-[#222222] text-black dark:text-white shadow-sm'
-                : 'text-neutral-500 hover:text-black dark:hover:text-white'
-              }`}
+            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${
+              tab === 'fitness'
+                ? 'bg-[#1E1E1E] dark:bg-[#1E1E1E] light:bg-white text-white dark:text-white light:text-black shadow-sm'
+                : 'text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
           >
             <Dumbbell className="w-3.5 h-3.5" />
             <span>Fit</span>
@@ -222,10 +224,11 @@ export const QuickCaptureModal: React.FC = () => {
 
           <button
             onClick={() => setTab('learning')}
-            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${tab === 'learning'
-                ? 'bg-white dark:bg-[#222222] text-black dark:text-white shadow-sm'
-                : 'text-neutral-500 hover:text-black dark:hover:text-white'
-              }`}
+            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${
+              tab === 'learning'
+                ? 'bg-[#1E1E1E] dark:bg-[#1E1E1E] light:bg-white text-white dark:text-white light:text-black shadow-sm'
+                : 'text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
             <span>Learn</span>
@@ -233,10 +236,11 @@ export const QuickCaptureModal: React.FC = () => {
 
           <button
             onClick={() => setTab('project')}
-            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${tab === 'project'
-                ? 'bg-white dark:bg-[#222222] text-black dark:text-white shadow-sm'
-                : 'text-neutral-500 hover:text-black dark:hover:text-white'
-              }`}
+            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${
+              tab === 'project'
+                ? 'bg-[#1E1E1E] dark:bg-[#1E1E1E] light:bg-white text-white dark:text-white light:text-black shadow-sm'
+                : 'text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
           >
             <FolderKanban className="w-3.5 h-3.5" />
             <span>Project</span>
@@ -244,10 +248,11 @@ export const QuickCaptureModal: React.FC = () => {
 
           <button
             onClick={() => setTab('personal')}
-            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${tab === 'personal'
-                ? 'bg-white dark:bg-[#222222] text-black dark:text-white shadow-sm'
-                : 'text-neutral-500 hover:text-black dark:hover:text-white'
-              }`}
+            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${
+              tab === 'personal'
+                ? 'bg-[#1E1E1E] dark:bg-[#1E1E1E] light:bg-white text-white dark:text-white light:text-black shadow-sm'
+                : 'text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
           >
             <Heart className="w-3.5 h-3.5" />
             <span>Life</span>
@@ -255,10 +260,11 @@ export const QuickCaptureModal: React.FC = () => {
 
           <button
             onClick={() => setTab('note')}
-            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${tab === 'note'
-                ? 'bg-white dark:bg-[#222222] text-black dark:text-white shadow-sm'
-                : 'text-neutral-500 hover:text-black dark:hover:text-white'
-              }`}
+            className={`py-1.5 rounded text-[11px] font-semibold transition-colors flex flex-col items-center gap-1 ${
+              tab === 'note'
+                ? 'bg-[#1E1E1E] dark:bg-[#1E1E1E] light:bg-white text-white dark:text-white light:text-black shadow-sm'
+                : 'text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Note</span>
@@ -275,29 +281,29 @@ export const QuickCaptureModal: React.FC = () => {
                   placeholder="Organization"
                   value={workOrg}
                   onChange={(e) => setWorkOrg(e.target.value)}
-                  className="px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                  className="px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
                 />
                 <input
                   type="text"
                   placeholder="Project name *"
                   value={workProject}
                   onChange={(e) => setWorkProject(e.target.value)}
-                  className="px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                  className="px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
                 />
               </div>
               <textarea
                 rows={2}
-                placeholder="Core task or problem solved *"
+                placeholder="Core problem solved or task executed *"
                 value={workTask}
                 onChange={(e) => setWorkTask(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
               <input
                 type="text"
-                placeholder="Measurable outcome (e.g. latency reduced 30%)"
+                placeholder="Measurable impact (e.g. latency reduced 35%)"
                 value={workOutcome}
                 onChange={(e) => setWorkOutcome(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
             </>
           )}
@@ -308,7 +314,7 @@ export const QuickCaptureModal: React.FC = () => {
                 <select
                   value={fitType}
                   onChange={(e) => setFitType(e.target.value as any)}
-                  className="px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-white dark:bg-[#1A1A1A] text-neutral-900 dark:text-white"
+                  className="px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-[#161616] dark:bg-[#161616] light:bg-white text-white dark:text-white light:text-black"
                 >
                   <option value="Strength">Strength</option>
                   <option value="Cardio">Cardio</option>
@@ -320,22 +326,22 @@ export const QuickCaptureModal: React.FC = () => {
                   placeholder="Duration (mins)"
                   value={fitDuration}
                   onChange={(e) => setFitDuration(e.target.value)}
-                  className="px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                  className="px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
                 />
               </div>
               <textarea
                 rows={2}
-                placeholder="Key exercises (one per line) or main lift"
+                placeholder="Key exercises (one per line) or main movement"
                 value={fitExercises}
                 onChange={(e) => setFitExercises(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
               <input
                 type="text"
-                placeholder="Workout notes or PRs"
+                placeholder="Session notes or PRs"
                 value={fitNotes}
                 onChange={(e) => setFitNotes(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
             </>
           )}
@@ -348,14 +354,14 @@ export const QuickCaptureModal: React.FC = () => {
                   placeholder="Subject"
                   value={learnSubject}
                   onChange={(e) => setLearnSubject(e.target.value)}
-                  className="col-span-2 px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                  className="col-span-2 px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
                 />
                 <input
                   type="number"
                   placeholder="Mins"
                   value={learnMinutes}
                   onChange={(e) => setLearnMinutes(e.target.value)}
-                  className="col-span-1 px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                  className="col-span-1 px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
                 />
               </div>
               <input
@@ -363,14 +369,14 @@ export const QuickCaptureModal: React.FC = () => {
                 placeholder="Concept or paper title *"
                 value={learnConcept}
                 onChange={(e) => setLearnConcept(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
               <textarea
                 rows={2}
-                placeholder="Key insight or principle learned"
+                placeholder="Key insight or principle distilled"
                 value={learnNotes}
                 onChange={(e) => setLearnNotes(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
             </>
           )}
@@ -383,22 +389,22 @@ export const QuickCaptureModal: React.FC = () => {
                   placeholder="Project name *"
                   value={projName}
                   onChange={(e) => setProjName(e.target.value)}
-                  className="col-span-2 px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                  className="col-span-2 px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
                 />
                 <input
                   type="number"
                   placeholder="% done"
                   value={projProgress}
                   onChange={(e) => setProjProgress(e.target.value)}
-                  className="col-span-1 px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                  className="col-span-1 px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
                 />
               </div>
               <textarea
                 rows={2}
-                placeholder="Milestone accomplished or code written"
+                placeholder="Milestone accomplished or code shipped"
                 value={projTask}
                 onChange={(e) => setProjTask(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
             </>
           )}
@@ -407,17 +413,17 @@ export const QuickCaptureModal: React.FC = () => {
             <>
               <input
                 type="text"
-                placeholder="Experience / event title *"
+                placeholder="Experience / moment title *"
                 value={persTitle}
                 onChange={(e) => setPersTitle(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
               <textarea
                 rows={2}
                 placeholder="Meaningful details or memory"
                 value={persNotes}
                 onChange={(e) => setPersNotes(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
             </>
           )}
@@ -426,17 +432,17 @@ export const QuickCaptureModal: React.FC = () => {
             <>
               <textarea
                 rows={4}
-                placeholder="Quick thought, reflection, or note to record for this day..."
+                placeholder="Quick observation, reflection, or philosophical musing to preserve for this day..."
                 value={generalNote}
                 onChange={(e) => setGeneralNote(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded border border-neutral-300 dark:border-[#2C2C2C] bg-transparent text-neutral-900 dark:text-white"
+                className="w-full px-2.5 py-1.5 rounded border border-[#252525] dark:border-[#252525] light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black"
               />
             </>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-[#242424]">
+        <div className="flex justify-end gap-2 pt-3 border-t border-[#1E1E1E] dark:border-[#1E1E1E] light:border-neutral-200">
           <Button variant="ghost" size="sm" onClick={closeQuickCapture}>
             Cancel
           </Button>

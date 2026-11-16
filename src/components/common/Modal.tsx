@@ -52,7 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: reducedMotion ? 0.05 : 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/75 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
           />
 
           {/* Modal Container */}
@@ -60,27 +60,27 @@ export const Modal: React.FC<ModalProps> = ({
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: 8 }}
             animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: 8 }}
-            transition={{ duration: reducedMotion ? 0.05 : 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white dark:bg-[#141414] border border-neutral-200 dark:border-[#292929] rounded-lg shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh]`}
+            transition={{ duration: reducedMotion ? 0.05 : 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className={`relative w-full ${maxWidthClasses[maxWidth]} bg-[#0E0E0E] dark:bg-[#0E0E0E] light:bg-[#FCFCFC] border border-[#222222] dark:border-[#222222] light:border-neutral-200 rounded-xl shadow-modal overflow-hidden z-10 flex flex-col max-h-[90vh]`}
           >
             {/* Header */}
             {(title || subtitle) && (
-              <div className="flex items-start justify-between p-5 border-b border-neutral-200 dark:border-[#242424] shrink-0">
+              <div className="flex items-start justify-between p-5 border-b border-[#1C1C1C] dark:border-[#1C1C1C] light:border-neutral-100 shrink-0">
                 <div>
                   {title && (
-                    <h3 className="text-base font-semibold tracking-tight text-neutral-900 dark:text-white">
+                    <h3 className="text-lg font-serif font-normal tracking-tight text-white dark:text-white light:text-neutral-900">
                       {title}
                     </h3>
                   )}
                   {subtitle && (
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    <p className="text-xs font-mono text-neutral-400 dark:text-neutral-500 light:text-neutral-500 mt-1">
                       {subtitle}
                     </p>
                   )}
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-1.5 -mr-1.5 -mt-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors rounded-md hover:bg-neutral-100 dark:hover:bg-[#1F1F1F]"
+                  className="p-1.5 -mr-1.5 -mt-1.5 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-500 light:hover:text-black transition-colors rounded-md hover:bg-[#1A1A1A] dark:hover:bg-[#1A1A1A] light:hover:bg-neutral-100"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -95,4 +95,3 @@ export const Modal: React.FC<ModalProps> = ({
     </AnimatePresence>
   );
 };
-

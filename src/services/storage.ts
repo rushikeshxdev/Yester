@@ -13,9 +13,11 @@ import { generateSampleRecords } from './sampleData';
 
 const SCHEMA_VERSION = 1;
 const STORAGE_KEYS = {
-  VERSION: 'life_os_schema_version',
-  RECORDS: `life_os_records_v${SCHEMA_VERSION}`,
-  PREFERENCES: `life_os_preferences_v${SCHEMA_VERSION}`,
+  VERSION: 'yester_schema_version',
+  RECORDS: `yester_records_v${SCHEMA_VERSION}`,
+  PREFERENCES: `yester_preferences_v${SCHEMA_VERSION}`,
+  LEGACY_RECORDS: `life_os_records_v${SCHEMA_VERSION}`,
+  LEGACY_PREFERENCES: `life_os_preferences_v${SCHEMA_VERSION}`,
 };
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -52,17 +54,27 @@ export function initStorage(): void {
       localStorage.setItem(STORAGE_KEYS.VERSION, String(SCHEMA_VERSION));
     }
 
-    // Initialize preferences if missing
+    // Migrate preferences from legacy if present
     const rawPrefs = localStorage.getItem(STORAGE_KEYS.PREFERENCES);
+    const legacyPrefs = localStorage.getItem(STORAGE_KEYS.LEGACY_PREFERENCES);
     if (!rawPrefs) {
-      localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(DEFAULT_PREFERENCES));
+      if (legacyPrefs) {
+        localStorage.setItem(STORAGE_KEYS.PREFERENCES, legacyPrefs);
+      } else {
+        localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(DEFAULT_PREFERENCES));
+      }
     }
 
-    // Check if records exist. If completely empty, load sample data so user immediately sees what LIFE OS looks like
+    // Migrate records from legacy if present, else seed realistic demonstration data
     const rawRecords = localStorage.getItem(STORAGE_KEYS.RECORDS);
+    const legacyRecords = localStorage.getItem(STORAGE_KEYS.LEGACY_RECORDS);
     if (!rawRecords) {
-      const sample = generateSampleRecords();
-      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(sample));
+      if (legacyRecords) {
+        localStorage.setItem(STORAGE_KEYS.RECORDS, legacyRecords);
+      } else {
+        const sample = generateSampleRecords();
+        localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(sample));
+      }
     }
   } catch (error) {
     console.error('Failed to initialize storage:', error);

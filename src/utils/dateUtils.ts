@@ -18,6 +18,10 @@ export const WEEKDAY_SHORT_MONDAY_FIRST = [
   'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
 ] as const;
 
+export const WEEKDAY_SHORT_SUNDAY_FIRST = [
+  'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+] as const;
+
 export function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }

@@ -23,6 +23,8 @@ const STORAGE_KEYS = {
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
   reducedMotion: false,
+  firstDayOfWeek: 1,
+  dateFormat: 'MDY',
   sampleDataLoaded: true,
 };
 

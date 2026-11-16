@@ -3,27 +3,41 @@
 @tailwind utilities;
 
 :root {
-  --bg: #070707;
-  --surface: #0F0F0F;
-  --surface-secondary: #151515;
-  --surface-tertiary: #1C1C1C;
-  --text-primary: #FFFFFF;
-  --text-secondary: #A3A3A3;
-  --text-muted: #666666;
-  --border: #222222;
-  --border-subtle: #181818;
+  --bg: #090A0C;
+  --bg-secondary: #0E1013;
+  --surface: #13161A;
+  --surface-secondary: #191D23;
+  --surface-tertiary: #20252C;
+  --text-primary: #F5F4F0;
+  --text-secondary: #A2A6AE;
+  --text-muted: #747A84;
+  --border-subtle: #242930;
+  --border: #303740;
+  --border-strong: #454C56;
+  --accent: #FF7138;
+  --accent-hover: #FF8555;
+  --accent-pressed: #E85A27;
+  --accent-subtle: #291A14;
+  --secondary-accent: #263E65;
 }
 
 .light {
-  --bg: #FCFCFC;
-  --surface: #F5F5F3;
-  --surface-secondary: #ECECE9;
-  --surface-tertiary: #E3E3DF;
-  --text-primary: #111111;
-  --text-secondary: #5A5A5A;
-  --text-muted: #8E8E8E;
-  --border: #E2E2DF;
-  --border-subtle: #ECECE9;
+  --bg: #F5F4F0;
+  --bg-secondary: #EEEDE8;
+  --surface: #FFFFFF;
+  --surface-secondary: #F8F7F4;
+  --surface-tertiary: #EBE9E3;
+  --text-primary: #191B20;
+  --text-secondary: #626872;
+  --text-muted: #858A92;
+  --border-subtle: #E5E3DC;
+  --border: #D7D5CE;
+  --border-strong: #B9B8B1;
+  --accent: #E95D2B;
+  --accent-hover: #D94E21;
+  --accent-pressed: #BD401A;
+  --accent-subtle: #FCE9E0;
+  --secondary-accent: #263E65;
 }
 
 body {
@@ -31,12 +45,12 @@ body {
   color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle, hairline scrollbar */
+/* Subtle, precision scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -47,16 +61,16 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2A2A2A;
+  background: #252A32;
   border-radius: 9999px;
 }
 
 .light ::-webkit-scrollbar-thumb {
-  background: #D4D4D0;
+  background: #D5D3CC;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #404040;
+  background: #3A414D;
 }
 
 /* Snap scrolling container utilities */
@@ -75,12 +89,6 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* Editorial rule separator */
-.editorial-rule {
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, var(--border) 15%, var(--border) 85%, transparent 100%);
 }
 
 /* Reduced motion accessibility */

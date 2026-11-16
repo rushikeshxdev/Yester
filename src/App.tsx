@@ -6,15 +6,42 @@ import { YearSelector } from './components/screens/YearSelector';
 import { MonthSelector } from './components/screens/MonthSelector';
 import { MonthlyCalendar } from './components/screens/MonthlyCalendar';
 import { DailyRecordView } from './components/screens/DailyRecordView';
+import { AnalyticsDashboard } from './components/screens/AnalyticsDashboard';
+import { SearchView } from './components/screens/SearchView';
+import { SettingsModal } from './components/screens/SettingsModal';
 import { CategoryDetailModal } from './components/screens/CategoryDetailModal';
 import { QuickCaptureModal } from './components/quickCapture/QuickCaptureModal';
 
 export const App: React.FC = () => {
-  const { screen, openQuickCapture, quickCapture } = useLifeOS();
+  const {
+    screen,
+    openQuickCapture,
+    quickCapture,
+    navigateToSearch,
+    isSettingsOpen,
+    closeSettings,
+  } = useLifeOS();
 
-  // Global keyboard shortcut: 'c' or 'C' to open Quick Capture when not in an input
+  // Global keyboard shortcuts:
+  // 'C' -> Quick Capture
+  // '⌘K' or 'Ctrl+K' -> Search
+  // 'Escape' -> Close open modals
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // ⌘K or Ctrl+K for Search
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        navigateToSearch();
+        return;
+      }
+
+      // Escape key to close settings
+      if (e.key === 'Escape' && isSettingsOpen) {
+        closeSettings();
+        return;
+      }
+
+      // 'c' or 'C' for Quick Capture (only if not typing in an input)
       if (
         e.key.toLowerCase() === 'c' &&
         !quickCapture.isOpen &&
@@ -32,11 +59,18 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [screen, quickCapture.isOpen, openQuickCapture]);
+  }, [
+    screen,
+    quickCapture.isOpen,
+    isSettingsOpen,
+    openQuickCapture,
+    navigateToSearch,
+    closeSettings,
+  ]);
 
   return (
-    <div className="min-h-screen bg-[#070707] dark:bg-[#070707] light:bg-[#FCFCFC] text-white dark:text-white light:text-neutral-900 transition-colors flex flex-col font-sans selection:bg-white selection:text-black">
-      {/* TIME FIRST Breadcrumb Header */}
+    <div className="min-h-screen bg-[#090A0C] dark:bg-[#090A0C] light:bg-[#FCFCFC] text-white dark:text-white light:text-neutral-900 transition-colors flex flex-col font-sans selection:bg-[#FF7138] selection:text-white">
+      {/* TIME FIRST Global Header Nav */}
       <BreadcrumbNav />
 
       {/* Main Temporal Navigation Routing */}
@@ -45,25 +79,28 @@ export const App: React.FC = () => {
         {screen === 'month' && <MonthSelector />}
         {screen === 'calendar' && <MonthlyCalendar />}
         {screen === 'daily' && <DailyRecordView />}
+        {screen === 'analytics' && <AnalyticsDashboard />}
+        {screen === 'search' && <SearchView />}
       </main>
 
       {/* Deep Telemetry Dossier Modal */}
       <CategoryDetailModal />
 
-      {/* Quick Capture Modal */}
+      {/* Quick Capture Modal (Concept Panel 6) */}
       <QuickCaptureModal />
 
-      {/* Floating Quick Capture Trigger (Shown when not in full-screen year selector) */}
+      {/* Settings Modal (Concept Panel 7) */}
+      <SettingsModal />
+
+      {/* Floating Orange Quick Capture Action (Concept Panel 6) */}
       {screen !== 'year' && (
         <button
           onClick={() => openQuickCapture()}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-white text-black dark:bg-white dark:text-black light:bg-black light:text-white shadow-elevated border border-neutral-200/20 hover:scale-105 active:scale-95 transition-all text-xs font-mono font-medium tracking-wide cursor-pointer select-none"
+          className="fixed bottom-7 right-7 z-40 w-12 h-12 rounded-full bg-[#FF7138] hover:bg-[#FF8352] text-white shadow-orange-md hover:scale-110 active:scale-95 transition-all flex items-center justify-center cursor-pointer select-none border border-white/20"
           title="Quick Capture (Press C)"
           aria-label="Quick Capture"
         >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Capture</span>
-          <span className="text-[10px] opacity-60 font-mono">C</span>
+          <Plus className="w-6 h-6 stroke-[2.5]" />
         </button>
       )}
     </div>

@@ -3,10 +3,13 @@ import {
   ScreenMode,
   DailyRecord,
   ActivityCategory,
+  UserPreferences,
 } from '../types';
 import {
   initStorage,
   getAllDailyRecords,
+  getUserPreferences,
+  saveUserPreferences,
   subscribeToStorage,
   loadDemonstrationData,
   clearDemonstrationData,
@@ -28,11 +31,13 @@ interface LifeOSContextType {
   selectedDate: string;
   activeCategoryModal: ActivityCategory | null;
   quickCapture: QuickCaptureState;
+  isSettingsOpen: boolean;
 
-  // Data
+  // Data & Preferences
   records: Record<string, DailyRecord>;
   activeRecord: DailyRecord | null;
   hasSampleData: boolean;
+  preferences: UserPreferences;
 
   // Navigation handlers
   setScreen: (screen: ScreenMode) => void;
@@ -43,12 +48,20 @@ interface LifeOSContextType {
   navigateToCalendar: () => void;
   navigateToMonths: () => void;
   navigateToYears: () => void;
+  navigateToAnalytics: () => void;
+  navigateToJournal: (dateKey?: string) => void;
+  navigateToSearch: () => void;
   openCategoryAnalytics: (category: ActivityCategory) => void;
   closeCategoryAnalytics: () => void;
 
   // Quick capture
   openQuickCapture: (category?: ActivityCategory, dateKey?: string) => void;
   closeQuickCapture: () => void;
+
+  // Settings
+  openSettings: () => void;
+  closeSettings: () => void;
+  updatePreferences: (prefs: Partial<UserPreferences>) => void;
 
   // Sample data controls
   loadSampleData: () => void;
@@ -72,6 +85,7 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [month, setMonth] = useState<number>(todayParts.month);
   const [selectedDate, setSelectedDate] = useState<string>(todayKey);
   const [activeCategoryModal, setActiveCategoryModal] = useState<ActivityCategory | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const [quickCapture, setQuickCapture] = useState<QuickCaptureState>({
     isOpen: false,
@@ -80,28 +94,27 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const [records, setRecords] = useState<Record<string, DailyRecord>>(() => getAllDailyRecords());
+  const [preferences, setPreferences] = useState<UserPreferences>(() => getUserPreferences());
 
   // Listen to storage mutations
   useEffect(() => {
     const unsubscribe = subscribeToStorage(() => {
       setRecords(getAllDailyRecords());
+      setPreferences(getUserPreferences());
     });
     return () => unsubscribe();
   }, []);
 
   const activeRecord = records[selectedDate] || null;
-
   const hasSampleData = Object.values(records).some((r) => r.isSampleData);
 
   const selectYear = useCallback((newYear: number) => {
     setYear(newYear);
-    // Move to month selector
     setScreen('month');
   }, []);
 
   const selectMonth = useCallback((newMonth: number) => {
     setMonth(newMonth);
-    // Keep date within valid days of selected month
     const currentDateParts = parseDateKey(selectedDate);
     const safeDay = Math.min(currentDateParts.day, 28);
     setSelectedDate(formatDateKey(year, newMonth, safeDay));
@@ -137,6 +150,24 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setScreen('year');
   }, []);
 
+  const navigateToAnalytics = useCallback(() => {
+    setScreen('analytics');
+  }, []);
+
+  const navigateToJournal = useCallback((dateKey?: string) => {
+    if (dateKey) {
+      setSelectedDate(dateKey);
+      const parts = parseDateKey(dateKey);
+      setYear(parts.year);
+      setMonth(parts.month);
+    }
+    setScreen('daily');
+  }, []);
+
+  const navigateToSearch = useCallback(() => {
+    setScreen('search');
+  }, []);
+
   const openCategoryAnalytics = useCallback((category: ActivityCategory) => {
     setActiveCategoryModal(category);
   }, []);
@@ -155,6 +186,19 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const closeQuickCapture = useCallback(() => {
     setQuickCapture((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const openSettings = useCallback(() => {
+    setIsSettingsOpen(true);
+  }, []);
+
+  const closeSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+  }, []);
+
+  const updatePreferences = useCallback((newPrefs: Partial<UserPreferences>) => {
+    const updated = saveUserPreferences(newPrefs);
+    setPreferences(updated);
   }, []);
 
   const handleLoadSampleData = useCallback(() => {
@@ -178,9 +222,11 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         selectedDate,
         activeCategoryModal,
         quickCapture,
+        isSettingsOpen,
         records,
         activeRecord,
         hasSampleData,
+        preferences,
         setScreen,
         selectYear,
         selectMonth,
@@ -189,10 +235,16 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         navigateToCalendar,
         navigateToMonths,
         navigateToYears,
+        navigateToAnalytics,
+        navigateToJournal,
+        navigateToSearch,
         openCategoryAnalytics,
         closeCategoryAnalytics,
         openQuickCapture,
         closeQuickCapture,
+        openSettings,
+        closeSettings,
+        updatePreferences,
         loadSampleData: handleLoadSampleData,
         clearSampleData: handleClearSampleData,
         clearAllData: handleClearAllData,

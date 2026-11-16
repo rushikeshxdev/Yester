@@ -1,137 +1,124 @@
 import React from 'react';
-import { ChevronRight, Calendar, Sparkles, ArrowLeft, Plus } from 'lucide-react';
+import { Sparkles, Plus, Settings, Search } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
-import { getMonthName, formatDisplayDate } from '../../utils/dateUtils';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './Button';
 
 export const BreadcrumbNav: React.FC = () => {
   const {
     screen,
-    year,
-    month,
-    selectedDate,
     navigateToYears,
-    navigateToMonths,
     navigateToCalendar,
-    goToToday,
+    navigateToAnalytics,
+    navigateToJournal,
+    navigateToSearch,
+    openSettings,
     hasSampleData,
     clearSampleData,
     loadSampleData,
     openQuickCapture,
   } = useLifeOS();
 
+  // If on the full-screen year selector, render the dedicated minimal immersive bar
   if (screen === 'year') {
-    return null; // Full-screen immersive experience on year selector
+    return null;
   }
 
-  const { monthName } = formatDisplayDate(selectedDate);
+  // Active navigation tab
+  const isCalendarActive = screen === 'calendar' || screen === 'month';
+  const isAnalyticsActive = screen === 'analytics';
+  const isJournalActive = screen === 'daily';
+  const isSearchActive = screen === 'search';
 
   return (
-    <header className="sticky top-0 z-30 w-full backdrop-blur-md bg-[#070707]/90 dark:bg-[#070707]/90 light:bg-[#FCFCFC]/90 border-b border-[#1E1E1E] dark:border-[#1E1E1E] light:border-[#E5E5E2] transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-        {/* Left: Brand + Breadcrumbs */}
-        <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
-          {/* Back Action */}
-          {screen === 'daily' && (
-            <button
-              onClick={navigateToCalendar}
-              className="p-1.5 -ml-1 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black rounded hover:bg-neutral-900 dark:hover:bg-[#161616] light:hover:bg-neutral-100 transition-colors flex items-center gap-1 text-[11px] font-mono"
-              title="Return to Calendar"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Calendar</span>
-            </button>
-          )}
-
-          {screen === 'calendar' && (
-            <button
-              onClick={navigateToMonths}
-              className="p-1.5 -ml-1 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black rounded hover:bg-neutral-900 dark:hover:bg-[#161616] light:hover:bg-neutral-100 transition-colors flex items-center gap-1 text-[11px] font-mono"
-              title="Return to Months"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Months</span>
-            </button>
-          )}
-
-          {screen === 'month' && (
-            <button
-              onClick={navigateToYears}
-              className="p-1.5 -ml-1 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black rounded hover:bg-neutral-900 dark:hover:bg-[#161616] light:hover:bg-neutral-100 transition-colors flex items-center gap-1 text-[11px] font-mono"
-              title="Return to Year Selector"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Years</span>
-            </button>
-          )}
-
-          <div className="h-3.5 w-[1px] bg-neutral-800 dark:bg-[#252525] light:bg-neutral-300 mx-1" />
-
-          {/* Root Brand: YESTER */}
+    <header className="sticky top-0 z-30 w-full backdrop-blur-md bg-[#090A0C]/90 dark:bg-[#090A0C]/90 light:bg-[#F5F4F0]/90 border-b border-[#242930] dark:border-[#242930] light:border-[#E5E3DC] transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
+        {/* Left: Brand Logo */}
+        <div className="flex items-center gap-6">
           <button
             onClick={navigateToYears}
-            className="flex items-baseline gap-1.5 group transition-opacity"
-            title="Yester — Home"
+            className="flex items-baseline gap-0.5 group focus:outline-none"
+            title="Yester &bull; Life Archive"
           >
-            <span className="text-sm font-serif italic tracking-wide font-normal text-white dark:text-white light:text-black group-hover:opacity-70 transition-opacity">
+            <span className="text-xl font-serif italic font-normal tracking-wide text-white dark:text-[#F5F4F0] light:text-[#191B20] group-hover:opacity-80 transition-opacity">
               Yester
             </span>
+            <span className="text-lg font-serif font-bold text-[#FF7138] dark:text-[#FF7138] light:text-[#E95D2B]">
+              .
+            </span>
           </button>
-
-          <ChevronRight className="w-3 h-3 text-neutral-600 shrink-0" />
-
-          {/* Year Crumb */}
-          <button
-            onClick={navigateToYears}
-            className={`text-xs font-mono transition-colors ${
-              screen === 'month'
-                ? 'text-white dark:text-white light:text-black font-semibold'
-                : 'text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-500 light:hover:text-black'
-            }`}
-          >
-            {year}
-          </button>
-
-          {/* Month Crumb */}
-          {(screen === 'calendar' || screen === 'daily') && (
-            <>
-              <ChevronRight className="w-3 h-3 text-neutral-600 shrink-0" />
-              <button
-                onClick={navigateToMonths}
-                className={`text-xs font-mono uppercase tracking-wider transition-colors ${
-                  screen === 'calendar'
-                    ? 'text-white dark:text-white light:text-black font-semibold'
-                    : 'text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-500 light:hover:text-black'
-                }`}
-              >
-                {getMonthName(month)}
-              </button>
-            </>
-          )}
-
-          {/* Day Crumb */}
-          {screen === 'daily' && (
-            <>
-              <ChevronRight className="w-3 h-3 text-neutral-600 shrink-0" />
-              <span className="text-xs font-mono text-white dark:text-white light:text-black font-medium tracking-wide">
-                {selectedDate.split('-')[2]}&nbsp;{monthName.slice(0, 3).toUpperCase()}
-              </span>
-            </>
-          )}
         </div>
 
-        {/* Right: Actions, Today, Quick Capture, Demo Toggle, Theme */}
+        {/* Center: Global Navigation Tabs with Active Orange Underline */}
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <button
+            onClick={navigateToCalendar}
+            className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors select-none ${
+              isCalendarActive
+                ? 'text-white dark:text-[#F5F4F0] light:text-[#191B20]'
+                : 'text-neutral-400 dark:text-[#A2A6AE] light:text-[#626872] hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
+          >
+            <span>Calendar</span>
+            {isCalendarActive && (
+              <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#FF7138] dark:bg-[#FF7138] light:bg-[#E95D2B] rounded-full" />
+            )}
+          </button>
+
+          <button
+            onClick={navigateToAnalytics}
+            className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors select-none ${
+              isAnalyticsActive
+                ? 'text-white dark:text-[#F5F4F0] light:text-[#191B20]'
+                : 'text-neutral-400 dark:text-[#A2A6AE] light:text-[#626872] hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
+          >
+            <span>Analytics</span>
+            {isAnalyticsActive && (
+              <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#FF7138] dark:bg-[#FF7138] light:bg-[#E95D2B] rounded-full" />
+            )}
+          </button>
+
+          <button
+            onClick={() => navigateToJournal()}
+            className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors select-none ${
+              isJournalActive
+                ? 'text-white dark:text-[#F5F4F0] light:text-[#191B20]'
+                : 'text-neutral-400 dark:text-[#A2A6AE] light:text-[#626872] hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
+          >
+            <span>Journal</span>
+            {isJournalActive && (
+              <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#FF7138] dark:bg-[#FF7138] light:bg-[#E95D2B] rounded-full" />
+            )}
+          </button>
+
+          <button
+            onClick={navigateToSearch}
+            className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors select-none ${
+              isSearchActive
+                ? 'text-white dark:text-[#F5F4F0] light:text-[#191B20]'
+                : 'text-neutral-400 dark:text-[#A2A6AE] light:text-[#626872] hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
+          >
+            <span>Search</span>
+            {isSearchActive && (
+              <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#FF7138] dark:bg-[#FF7138] light:bg-[#E95D2B] rounded-full" />
+            )}
+          </button>
+        </nav>
+
+        {/* Right: Actions, Search, Quick Capture, Settings, Theme, Profile */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Sample Data Indicator */}
+          {/* Sample Data Toggle Badge */}
           {hasSampleData ? (
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded border border-[#222222] dark:border-[#222222] light:border-neutral-200 bg-[#121212] dark:bg-[#121212] light:bg-neutral-100">
-              <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
-              <span className="text-[11px] font-mono text-neutral-400 light:text-neutral-600">Sample Records</span>
+            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#242930] dark:border-[#242930] light:border-[#E5E3DC] bg-[#13161A] dark:bg-[#13161A] light:bg-[#FFFFFF]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7138]" />
+              <span className="text-[10px] font-mono text-neutral-400">Sample Active</span>
               <button
                 onClick={clearSampleData}
-                className="text-[10px] uppercase font-mono ml-1 text-neutral-500 hover:text-red-400 underline transition-colors"
-                title="Clear demonstration records"
+                className="text-[9px] uppercase font-mono ml-1 text-neutral-500 hover:text-red-400 underline transition-colors"
+                title="Clear sample data"
               >
                 Clear
               </button>
@@ -139,10 +126,10 @@ export const BreadcrumbNav: React.FC = () => {
           ) : (
             <button
               onClick={loadSampleData}
-              className="hidden lg:flex items-center gap-1.5 text-[11px] font-mono text-neutral-400 hover:text-white light:text-neutral-600 light:hover:text-black transition-colors"
-              title="Load demo journal entries"
+              className="hidden xl:flex items-center gap-1 text-[11px] font-mono text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black transition-colors"
+              title="Load demo journal records"
             >
-              <Sparkles className="w-3 h-3" />
+              <Sparkles className="w-3 h-3 text-[#FF7138]" />
               <span>Load Sample</span>
             </button>
           )}
@@ -152,25 +139,42 @@ export const BreadcrumbNav: React.FC = () => {
             size="sm"
             variant="secondary"
             onClick={() => openQuickCapture()}
-            icon={<Plus className="w-3 h-3" />}
-            className="hidden sm:inline-flex text-[11px] font-mono uppercase tracking-wider"
+            icon={<Plus className="w-3.5 h-3.5 text-[#FF7138]" />}
+            className="hidden md:inline-flex text-xs font-mono uppercase tracking-wider"
           >
             Capture
           </Button>
 
-          {/* Today Button */}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={goToToday}
-            icon={<Calendar className="w-3 h-3" />}
-            className="text-[11px] font-mono"
+          {/* Search Shortcut Icon */}
+          <button
+            onClick={navigateToSearch}
+            className="p-1.5 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black rounded-md hover:bg-[#191D23] dark:hover:bg-[#191D23] light:hover:bg-neutral-200 transition-colors"
+            title="Search memories (Press ⌘K)"
+            aria-label="Search"
           >
-            Today
-          </Button>
+            <Search className="w-4 h-4" />
+          </button>
 
           {/* Theme Toggle */}
           <ThemeToggle />
+
+          {/* Settings Trigger Icon */}
+          <button
+            onClick={openSettings}
+            className="p-1.5 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black rounded-md hover:bg-[#191D23] dark:hover:bg-[#191D23] light:hover:bg-neutral-200 transition-colors"
+            title="Settings & Preferences"
+            aria-label="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
+          {/* Profile Circle Avatar */}
+          <div
+            className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#FF7138] to-[#FF8555] flex items-center justify-center text-black font-mono font-bold text-xs select-none shadow-orange-sm cursor-pointer"
+            title="Sovereign Life Archive"
+          >
+            Y
+          </div>
         </div>
       </div>
     </header>

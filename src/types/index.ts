@@ -169,11 +169,24 @@ export interface DailyRecord {
 export interface UserPreferences {
   theme: 'dark' | 'light';
   reducedMotion: boolean;
+  firstDayOfWeek: 0 | 1; // 0 = Sunday, 1 = Monday
+  dateFormat: 'MDY' | 'DMY' | 'YMD';
   hasSeenOnboarding?: boolean;
   sampleDataLoaded?: boolean;
 }
 
-export type ScreenMode = 'year' | 'month' | 'calendar' | 'daily';
+export type ScreenMode = 'year' | 'month' | 'calendar' | 'daily' | 'analytics' | 'search';
+
+export interface SearchResultItem {
+  id: string;
+  date: string;
+  category: ActivityCategory | 'reflection' | 'summary';
+  title: string;
+  subtitle?: string;
+  snippet: string;
+  tags?: string[];
+  entity?: any;
+}
 
 export interface CalendarMonthMeta {
   year: number;

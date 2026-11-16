@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Trash2,
   Edit3,
+  Sparkles,
+  Plus,
 } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -20,10 +21,9 @@ import {
   deleteProjectEntry,
   deletePersonalEntry,
   updateHealthEntry,
+  updateDailyReflection,
 } from '../../services/storage';
 import { ActivityCategory } from '../../types';
-import { Button } from '../common/Button';
-import { Badge } from '../common/Badge';
 import { WorkSection } from '../daily/WorkSection';
 import { FitnessSection } from '../daily/FitnessSection';
 import { LearningSection } from '../daily/LearningSection';
@@ -37,42 +37,49 @@ export const DailyRecordView: React.FC = () => {
   const {
     selectedDate,
     selectDate,
-    navigateToCalendar,
     records,
+    openQuickCapture,
   } = useLifeOS();
   const { reducedMotion } = useTheme();
 
   const record = records[selectedDate] || getOrCreateDailyRecord(selectedDate);
-  const { dayOfWeek, dayNumber, monthName, year, fullDateString } = formatDisplayDate(selectedDate);
+  const { dayOfWeek, dayNumber, monthName, year } = formatDisplayDate(selectedDate);
 
   // Modal state for adding/editing records
   const [modalOpen, setModalOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState<ActivityCategory | 'reflection'>('work');
   const [editingEntry, setEditingEntry] = useState<any>(null);
 
-  // Inline summary editing state
-  const [isEditingSummary, setIsEditingSummary] = useState(false);
-  const [summaryInput, setSummaryInput] = useState(record.summary || '');
+  // Inline headline editing
+  const [isEditingHeadline, setIsEditingHeadline] = useState(false);
+  const [headlineInput, setHeadlineInput] = useState(
+    record.summary || record.reflection?.freeformNotes || ''
+  );
 
-  // Next / Previous day navigation
+  // Next / Previous day calculation
   const dateParts = parseDateKey(selectedDate);
-  const currentDateObj = new Date(dateParts.year, dateParts.month - 1, dateParts.day);
-
-  const prevDateObj = new Date(currentDateObj);
-  prevDateObj.setDate(currentDateObj.getDate() - 1);
-  const prevDateKey = formatDateKey(
-    prevDateObj.getFullYear(),
-    prevDateObj.getMonth() + 1,
-    prevDateObj.getDate()
+  const currentDateObj = useMemo(
+    () => new Date(dateParts.year, dateParts.month - 1, dateParts.day),
+    [dateParts]
   );
 
-  const nextDateObj = new Date(currentDateObj);
-  nextDateObj.setDate(currentDateObj.getDate() + 1);
-  const nextDateKey = formatDateKey(
-    nextDateObj.getFullYear(),
-    nextDateObj.getMonth() + 1,
-    nextDateObj.getDate()
-  );
+  const dayOfYear = useMemo(() => {
+    const startOfYear = new Date(currentDateObj.getFullYear(), 0, 1);
+    const diff = currentDateObj.getTime() - startOfYear.getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+  }, [currentDateObj]);
+
+  const prevDateKey = useMemo(() => {
+    const d = new Date(currentDateObj);
+    d.setDate(currentDateObj.getDate() - 1);
+    return formatDateKey(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  }, [currentDateObj]);
+
+  const nextDateKey = useMemo(() => {
+    const d = new Date(currentDateObj);
+    d.setDate(currentDateObj.getDate() + 1);
+    return formatDateKey(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  }, [currentDateObj]);
 
   const handleOpenAddModal = (category: ActivityCategory | 'reflection') => {
     setModalCategory(category);
@@ -86,12 +93,28 @@ export const DailyRecordView: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSaveSummary = () => {
-    saveDailyRecord({
-      ...record,
-      summary: summaryInput.trim() || undefined,
-    });
-    setIsEditingSummary(false);
+  const handleSaveHeadline = () => {
+    const headline = headlineInput.trim() || undefined;
+    const existingRefl = record.reflection || {
+      id: `refl-${Date.now()}`,
+      date: selectedDate,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (headline) {
+      updateDailyReflection(selectedDate, {
+        ...existingRefl,
+        freeformNotes: headline,
+      });
+
+      saveDailyRecord({
+        ...record,
+        summary: headline,
+      });
+    }
+
+    setIsEditingHeadline(false);
   };
 
   const handleToggleHabit = (habitId: string) => {
@@ -105,121 +128,189 @@ export const DailyRecordView: React.FC = () => {
     });
   };
 
-  return (
-    <div className="w-full min-h-[calc(100vh-3.5rem)] bg-[#070707] dark:bg-[#070707] light:bg-[#FCFCFC] text-white dark:text-white light:text-neutral-900 select-text pb-24 transition-colors">
-      {/* Editorial Journal Container */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-10">
-        {/* Top Control Bar: Back & Temporal Pagination */}
-        <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#1E1E1E] dark:border-[#1E1E1E] light:border-neutral-200">
-          <button
-            onClick={navigateToCalendar}
-            className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Return to Calendar Grid</span>
-          </button>
+  // Category counts for the pill bar (Concept Panel 5)
+  const categoryPills = [
+    {
+      category: 'work',
+      label: 'Work',
+      count: record.work?.length || 0,
+      color: '#FF7138',
+    },
+    {
+      category: 'fitness',
+      label: 'Fitness',
+      count: record.fitness?.length || 0,
+      color: '#4A72B2',
+    },
+    {
+      category: 'learning',
+      label: 'Learning',
+      count: record.learning?.length || 0,
+      color: '#3FB950',
+    },
+    {
+      category: 'personal',
+      label: 'Personal',
+      count: record.personal?.length || 0,
+      color: '#E5A84B',
+    },
+    {
+      category: 'projects',
+      label: 'Projects',
+      count: record.projects?.length || 0,
+      color: '#A371F7',
+    },
+  ];
 
-          <div className="flex items-center gap-1.5 border border-[#222222] dark:border-[#222222] light:border-neutral-300 rounded-md p-0.5 bg-[#121212] dark:bg-[#121212] light:bg-neutral-100">
+  const currentHeadline =
+    record.summary ||
+    record.reflection?.freeformNotes ||
+    'A productive day and a clear mind.';
+
+  return (
+    <div className="w-full min-h-[calc(100vh-3.5rem)] bg-[#090A0C] dark:bg-[#090A0C] light:bg-[#FCFCFC] text-white dark:text-white light:text-neutral-900 select-text pb-24 transition-colors">
+      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+        {/* Temporal Day Pagination Header (Concept Panel 5) */}
+        <div className="flex items-center justify-between pb-4 border-b border-[#1A1F26] dark:border-[#1A1F26] light:border-neutral-200">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => selectDate(prevDateKey)}
-              className="p-1 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black rounded hover:bg-[#1D1D1D] dark:hover:bg-[#1D1D1D] light:hover:bg-neutral-200 transition-colors"
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black hover:bg-[#14181F] transition-colors"
               title="Previous Day"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
-            <span className="text-[11px] font-mono text-neutral-300 dark:text-neutral-300 light:text-neutral-700 px-2">
-              {dayNumber} {monthName.slice(0, 3)} {year}
-            </span>
+
+            <div>
+              <h2 className="text-sm font-sans font-medium text-white dark:text-white light:text-neutral-900">
+                {dayOfWeek}, {monthName} {dayNumber}, {year}
+              </h2>
+              <span className="text-[11px] font-mono text-neutral-400">
+                Day {dayOfYear} &bull; {year}
+              </span>
+            </div>
+
             <button
               onClick={() => selectDate(nextDateKey)}
-              className="p-1 text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black rounded hover:bg-[#1D1D1D] dark:hover:bg-[#1D1D1D] light:hover:bg-neutral-200 transition-colors"
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black hover:bg-[#14181F] transition-colors"
               title="Next Day"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openQuickCapture(undefined, selectedDate)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF7138] hover:bg-[#FF8352] text-white text-xs font-medium tracking-wide shadow-orange-sm transition-all"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Capture</span>
             </button>
           </div>
         </div>
 
-        {/* Editorial Journal Header */}
+        {/* Hero Editorial Header + Cover Visual (Concept Panel 5) */}
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: 8 }}
           animate={reducedMotion ? false : { opacity: 1, y: 0 }}
           transition={{ duration: reducedMotion ? 0.05 : 0.22 }}
-          className="space-y-4"
+          className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 sm:p-7 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-widest text-neutral-500 font-semibold">
-              DAILY ENTRY &bull; {monthName.toUpperCase()} {dayNumber}, {year}
-            </span>
-            {record.isSampleData && (
-              <Badge variant="muted" size="sm">
-                Sample Record
-              </Badge>
-            )}
-          </div>
+          {/* Left Column: Headline Epigraph */}
+          <div className="md:col-span-7 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#FF7138] font-semibold">
+                DAILY THESIS
+              </span>
+            </div>
 
-          <div>
-            <h1 className="text-4xl sm:text-6xl font-serif italic font-normal tracking-tight text-white dark:text-white light:text-neutral-900">
-              {dayOfWeek}
-            </h1>
-            <p className="text-xs font-mono text-neutral-400 dark:text-neutral-500 light:text-neutral-500 mt-1">
-              {fullDateString}
-            </p>
-          </div>
-
-          {/* Daily Thesis / Executive Summary Card */}
-          <div className="p-4 sm:p-5 rounded-lg bg-[#0E0E0E] dark:bg-[#0E0E0E] light:bg-neutral-50 border border-[#1E1E1E] dark:border-[#1E1E1E] light:border-neutral-200">
-            {isEditingSummary ? (
+            {isEditingHeadline ? (
               <div className="space-y-3">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 block">
-                  Daily Overview & Thesis
-                </label>
                 <input
                   type="text"
-                  value={summaryInput}
-                  onChange={(e) => setSummaryInput(e.target.value)}
-                  placeholder="Summarize the core accomplishments, thoughts, and flow of this day..."
-                  className="w-full px-3 py-2 text-xs font-mono rounded border border-neutral-700 dark:border-neutral-700 light:border-neutral-300 bg-transparent text-white dark:text-white light:text-black focus:outline-none"
+                  value={headlineInput}
+                  onChange={(e) => setHeadlineInput(e.target.value)}
+                  placeholder="Enter a daily epigraph or headline..."
+                  className="w-full px-3 py-2 text-sm font-serif rounded-lg border border-[#2B3340] bg-[#14181F] text-white focus:outline-none focus:border-[#FF7138]"
                   autoFocus
                 />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setSummaryInput(record.summary || '');
-                      setIsEditingSummary(false);
-                    }}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveHeadline}
+                    className="px-3 py-1 rounded bg-[#FF7138] text-white text-xs font-medium"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setIsEditingHeadline(false)}
+                    className="px-3 py-1 rounded bg-neutral-800 text-neutral-300 text-xs"
                   >
                     Cancel
-                  </Button>
-                  <Button size="sm" variant="primary" onClick={handleSaveSummary}>
-                    Save Overview
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-start justify-between gap-4">
-                <p className="text-sm font-serif italic text-neutral-300 dark:text-neutral-300 light:text-neutral-700 leading-relaxed">
-                  {record.summary ? `&ldquo;${record.summary}&rdquo;` : 'No daily overview written yet.'}
-                </p>
-                <button
-                  onClick={() => {
-                    setSummaryInput(record.summary || '');
-                    setIsEditingSummary(true);
-                  }}
-                  className="text-xs font-mono text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black shrink-0 flex items-center gap-1 transition-colors"
-                >
+              <div className="group cursor-pointer" onClick={() => setIsEditingHeadline(true)}>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif italic text-white dark:text-white light:text-neutral-900 tracking-tight leading-snug">
+                  &ldquo;{currentHeadline}&rdquo;
+                </h1>
+                <span className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-500 group-hover:text-neutral-300 mt-2 transition-colors">
                   <Edit3 className="w-3 h-3" />
-                  <span>{record.summary ? 'Edit' : 'Add Overview'}</span>
-                </button>
+                  <span>Click to refine epigraph</span>
+                </span>
               </div>
             )}
           </div>
+
+          {/* Right Column: Visual Memory Cover (Concept Panel 5) */}
+          <div className="md:col-span-5 h-40 rounded-xl overflow-hidden relative group border border-[#222731] shadow-inner bg-[#14181F]">
+            {/* Ambient aesthetic sunset skyline memory image */}
+            <img
+              src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
+              alt="Day Memory Cover"
+              className="w-full h-full object-cover brightness-75 group-hover:scale-105 group-hover:brightness-90 transition-all duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+            <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[10px] font-mono text-white/90">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-[#FF7138]" />
+                <span>Visual Memory</span>
+              </span>
+              <span className="opacity-75">{selectedDate}</span>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Sections A to G: Clean Vertical Flow */}
-        <div className="space-y-12">
+        {/* Category Pills Row (Concept Panel 5) */}
+        <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+          {categoryPills.map((pill) => {
+            const hasEntries = pill.count > 0;
+            return (
+              <button
+                key={pill.category}
+                onClick={() => handleOpenAddModal(pill.category as ActivityCategory)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-sans transition-all cursor-pointer ${
+                  hasEntries
+                    ? 'bg-[#14181F] text-white border border-[#232934] shadow-sm'
+                    : 'bg-[#0E1115] text-neutral-500 border border-[#1A1F26] hover:text-neutral-300'
+                }`}
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: pill.color }}
+                />
+                <span className="font-medium">{pill.label}</span>
+                <span className="font-mono text-[11px] text-neutral-400">
+                  {pill.count} {pill.count === 1 ? 'entry' : 'entries'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Vertical Editorial Sections A to G */}
+        <div className="space-y-10 pt-2">
           {/* Section A: Work & Professional */}
           <WorkSection
             entries={record.work || []}
@@ -260,53 +351,45 @@ export const DailyRecordView: React.FC = () => {
             onDelete={(id) => deletePersonalEntry(selectedDate, id)}
           />
 
-          {/* Section F: Health & Habits */}
+          {/* Section F: Health & Vitals */}
           <HealthSection
             health={record.health}
             onEdit={() => handleOpenAddModal('health')}
             onToggleHabit={handleToggleHabit}
           />
 
-          {/* Section G: Daily Reflection */}
+          {/* Section G: Evening Reflection */}
           <ReflectionSection
             reflection={record.reflection}
             onEdit={() => handleOpenAddModal('reflection')}
           />
         </div>
 
-        {/* Footer actions */}
-        <div className="pt-8 border-t border-[#1C1C1C] dark:border-[#1C1C1C] light:border-neutral-200 flex items-center justify-between text-xs font-mono text-neutral-500">
+        {/* Daily Record Footer Actions */}
+        <div className="pt-8 border-t border-[#1A1F26] dark:border-[#1A1F26] light:border-neutral-200 flex items-center justify-between text-xs font-mono text-neutral-500">
+          <span>Target Date: {selectedDate}</span>
           <button
             onClick={() => {
-              if (window.confirm('Delete all records for this entire day?')) {
+              if (window.confirm('Delete this complete day record? This action cannot be undone.')) {
                 deleteDailyRecord(selectedDate);
               }
             }}
-            className="hover:text-red-400 flex items-center gap-1 transition-colors"
+            className="flex items-center gap-1 text-red-500/80 hover:text-red-400 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear This Day&apos;s Records</span>
-          </button>
-
-          <button
-            onClick={navigateToCalendar}
-            className="hover:text-white dark:hover:text-white light:hover:text-black transition-colors"
-          >
-            Back to Calendar Grid &uarr;
+            <span>Purge Daily Record</span>
           </button>
         </div>
       </div>
 
-      {/* Daily Entry Modal */}
-      {modalOpen && (
-        <DailyEntryModal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          dateKey={selectedDate}
-          category={modalCategory}
-          existingEntry={editingEntry}
-        />
-      )}
+      {/* Daily Entry Modal for In-depth Editing */}
+      <DailyEntryModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        dateKey={selectedDate}
+        category={modalCategory}
+        existingEntry={editingEntry}
+      />
     </div>
   );
 };

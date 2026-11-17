@@ -8,6 +8,8 @@ import { MonthlyCalendar } from './components/screens/MonthlyCalendar';
 import { DailyRecordView } from './components/screens/DailyRecordView';
 import { AnalyticsDashboard } from './components/screens/AnalyticsDashboard';
 import { SearchView } from './components/screens/SearchView';
+import { PlansView } from './components/screens/PlansView';
+import { PlanDetailView } from './components/screens/PlanDetailView';
 import { SettingsModal } from './components/screens/SettingsModal';
 import { CategoryDetailModal } from './components/screens/CategoryDetailModal';
 import { QuickCaptureModal } from './components/quickCapture/QuickCaptureModal';
@@ -81,6 +83,8 @@ export const App: React.FC = () => {
         {screen === 'daily' && <DailyRecordView />}
         {screen === 'analytics' && <AnalyticsDashboard />}
         {screen === 'search' && <SearchView />}
+        {screen === 'plans' && <PlansView />}
+        {screen === 'plan-detail' && <PlanDetailView />}
       </main>
 
       {/* Deep Telemetry Dossier Modal */}

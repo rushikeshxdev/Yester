@@ -4,6 +4,7 @@ import {
   DailyRecord,
   ActivityCategory,
   UserPreferences,
+  LifePlan,
 } from '../types';
 import {
   initStorage,
@@ -14,6 +15,11 @@ import {
   loadDemonstrationData,
   clearDemonstrationData,
   clearAllUserData,
+  getAllPlans,
+  savePlan as savePlanToStorage,
+  archivePlan as archivePlanInStorage,
+  completePlan as completePlanInStorage,
+  deletePlan as deletePlanFromStorage,
 } from '../services/storage';
 import { getTodayDateKey, parseDateKey, formatDateKey } from '../utils/dateUtils';
 import { parseHash, buildHash } from '../utils/routerUtils';
@@ -41,6 +47,11 @@ interface LifeOSContextType {
   hasSampleData: boolean;
   preferences: UserPreferences;
 
+  // Plans & Trajectories
+  plans: Record<string, LifePlan>;
+  activePlanId: string | null;
+  activePlan: LifePlan | null;
+
   // Navigation handlers
   setScreen: (screen: ScreenMode) => void;
   selectYear: (year: number) => void;
@@ -53,8 +64,17 @@ interface LifeOSContextType {
   navigateToAnalytics: () => void;
   navigateToJournal: (dateKey?: string) => void;
   navigateToSearch: () => void;
+  navigateToPlans: () => void;
+  navigateToPlanDetail: (id: string) => void;
   openCategoryAnalytics: (category: ActivityCategory) => void;
   closeCategoryAnalytics: () => void;
+
+  // Plan actions
+  createPlan: (plan: LifePlan) => LifePlan;
+  updatePlan: (plan: LifePlan) => LifePlan;
+  archivePlan: (id: string) => void;
+  completePlan: (id: string) => void;
+  deletePlan: (id: string) => void;
 
   // Quick capture
   openQuickCapture: (category?: ActivityCategory, dateKey?: string) => void;
@@ -106,23 +126,26 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [records, setRecords] = useState<Record<string, DailyRecord>>(() => getAllDailyRecords());
   const [preferences, setPreferences] = useState<UserPreferences>(() => getUserPreferences());
+  const [plans, setPlans] = useState<Record<string, LifePlan>>(() => getAllPlans());
+  const [activePlanId, setActivePlanId] = useState<string | null>(initialRoute?.planId ?? null);
 
   // Listen to storage mutations
   useEffect(() => {
     const unsubscribe = subscribeToStorage(() => {
       setRecords(getAllDailyRecords());
       setPreferences(getUserPreferences());
+      setPlans(getAllPlans());
     });
     return () => unsubscribe();
   }, []);
 
   // Synchronize state changes to URL hash (two-way router)
   useEffect(() => {
-    const targetHash = buildHash({ screen, year, month, selectedDate });
+    const targetHash = buildHash({ screen, year, month, selectedDate, activePlanId });
     if (window.location.hash !== targetHash) {
       window.location.hash = targetHash;
     }
-  }, [screen, year, month, selectedDate]);
+  }, [screen, year, month, selectedDate, activePlanId]);
 
   // Listen to browser Back/Forward navigation (hashchange)
   useEffect(() => {
@@ -147,6 +170,9 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (route.dateKey) {
         setSelectedDateState((cur) => (cur !== route.dateKey ? route.dateKey! : cur));
       }
+      if (route.planId !== undefined) {
+        setActivePlanId(route.planId);
+      }
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -154,6 +180,7 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const activeRecord = records[selectedDate] || null;
+  const activePlan = activePlanId ? plans[activePlanId] || null : null;
   const hasSampleData = Object.values(records).some((r) => r.isSampleData);
 
   const setScreen = useCallback((newScreen: ScreenMode) => {
@@ -225,6 +252,47 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setScreen('search');
   }, [setScreen]);
 
+  const navigateToPlans = useCallback(() => {
+    setActivePlanId(null);
+    setScreen('plans');
+  }, [setScreen]);
+
+  const navigateToPlanDetail = useCallback((id: string) => {
+    setActivePlanId(id);
+    setScreen('plan-detail');
+  }, [setScreen]);
+
+  const handleCreatePlan = useCallback((plan: LifePlan) => {
+    const saved = savePlanToStorage(plan);
+    setPlans(getAllPlans());
+    return saved;
+  }, []);
+
+  const handleUpdatePlan = useCallback((plan: LifePlan) => {
+    const saved = savePlanToStorage(plan);
+    setPlans(getAllPlans());
+    return saved;
+  }, []);
+
+  const handleArchivePlan = useCallback((id: string) => {
+    archivePlanInStorage(id);
+    setPlans(getAllPlans());
+  }, []);
+
+  const handleCompletePlan = useCallback((id: string) => {
+    completePlanInStorage(id);
+    setPlans(getAllPlans());
+  }, []);
+
+  const handleDeletePlan = useCallback((id: string) => {
+    deletePlanFromStorage(id);
+    setPlans(getAllPlans());
+    if (activePlanId === id) {
+      setActivePlanId(null);
+      setScreen('plans');
+    }
+  }, [activePlanId, setScreen]);
+
   const openCategoryAnalytics = useCallback((category: ActivityCategory) => {
     setActiveCategoryModal(category);
   }, []);
@@ -285,6 +353,9 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         activeRecord,
         hasSampleData,
         preferences,
+        plans,
+        activePlanId,
+        activePlan,
         setScreen,
         selectYear,
         selectMonth,
@@ -296,6 +367,8 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         navigateToAnalytics,
         navigateToJournal,
         navigateToSearch,
+        navigateToPlans,
+        navigateToPlanDetail,
         openCategoryAnalytics,
         closeCategoryAnalytics,
         openQuickCapture,
@@ -303,6 +376,11 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         openSettings,
         closeSettings,
         updatePreferences,
+        createPlan: handleCreatePlan,
+        updatePlan: handleUpdatePlan,
+        archivePlan: handleArchivePlan,
+        completePlan: handleCompletePlan,
+        deletePlan: handleDeletePlan,
         loadSampleData: handleLoadSampleData,
         clearSampleData: handleClearSampleData,
         clearAllData: handleClearAllData,

@@ -13,6 +13,7 @@ export const BreadcrumbNav: React.FC = () => {
     navigateToAnalytics,
     navigateToJournal,
     navigateToSearch,
+    navigateToPlans,
     openSettings,
     hasSampleData,
     clearSampleData,
@@ -70,6 +71,7 @@ export const BreadcrumbNav: React.FC = () => {
   // Active navigation tab
   const isCalendarActive = screen === 'calendar' || screen === 'month';
   const isAnalyticsActive = screen === 'analytics';
+  const isPlansActive = screen === 'plans' || screen === 'plan-detail';
   const isJournalActive = screen === 'daily';
   const isSearchActive = screen === 'search';
 
@@ -118,6 +120,20 @@ export const BreadcrumbNav: React.FC = () => {
           >
             <span>Analytics</span>
             {isAnalyticsActive && (
+              <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#FF7138] dark:bg-[#FF7138] light:bg-[#E95D2B] rounded-full" />
+            )}
+          </button>
+
+          <button
+            onClick={navigateToPlans}
+            className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors select-none ${
+              isPlansActive
+                ? 'text-white dark:text-[#F5F4F0] light:text-[#191B20]'
+                : 'text-neutral-400 dark:text-[#A2A6AE] light:text-[#626872] hover:text-white dark:hover:text-white light:hover:text-black'
+            }`}
+          >
+            <span>Plans</span>
+            {isPlansActive && (
               <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#FF7138] dark:bg-[#FF7138] light:bg-[#E95D2B] rounded-full" />
             )}
           </button>

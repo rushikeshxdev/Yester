@@ -6,6 +6,7 @@ export interface RouteState {
   year?: number;
   month?: number;
   dateKey?: string;
+  planId?: string;
 }
 
 /**
@@ -17,6 +18,8 @@ export interface RouteState {
  * - #/journal/:date -> daily journal record (e.g. #/journal/2024-06-25)
  * - #/analytics -> analytics dashboard
  * - #/search -> search and filter
+ * - #/plans -> plans portfolio overview
+ * - #/plans/:id -> plan trajectory dossier
  */
 export const parseHash = (rawHash: string): RouteState | null => {
   const hash = rawHash.replace(/^#\/?/, '').trim();
@@ -30,6 +33,19 @@ export const parseHash = (rawHash: string): RouteState | null => {
 
   if (hash === 'search') {
     return { screen: 'search' };
+  }
+
+  if (hash === 'plans') {
+    return { screen: 'plans' };
+  }
+
+  // #/plans/:id
+  const planDetailMatch = hash.match(/^plans\/([a-zA-Z0-9_-]+)$/);
+  if (planDetailMatch) {
+    return {
+      screen: 'plan-detail',
+      planId: planDetailMatch[1],
+    };
   }
 
   // #/months/:year (e.g. #/months/2024)
@@ -71,6 +87,7 @@ export const buildHash = (state: {
   year: number;
   month: number;
   selectedDate: string;
+  activePlanId?: string | null;
 }): string => {
   switch (state.screen) {
     case 'year':
@@ -85,6 +102,10 @@ export const buildHash = (state: {
       return '#/analytics';
     case 'search':
       return '#/search';
+    case 'plans':
+      return '#/plans';
+    case 'plan-detail':
+      return state.activePlanId ? `#/plans/${state.activePlanId}` : '#/plans';
     default:
       return '#/years';
   }

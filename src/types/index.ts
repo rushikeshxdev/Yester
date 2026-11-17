@@ -30,6 +30,8 @@ export interface WorkEntry {
   whatILearned?: string;
   reflections?: string;
   notes?: string;
+  planId?: string;
+  planContribution?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +62,8 @@ export interface FitnessEntry {
   bodyweightKg?: number;
   personalRecords?: string[];
   notes?: string;
+  planId?: string;
+  planContribution?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,6 +80,8 @@ export interface LearningEntry {
   problemsSolved?: string[];
   whatIUnderstood?: string;
   whatToImprove?: string;
+  planId?: string;
+  planContribution?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +99,8 @@ export interface ProjectEntry {
   nextSteps?: string;
   repositoryLinks: EvidenceLink[];
   notes?: string;
+  planId?: string;
+  planContribution?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +115,8 @@ export interface PersonalEntry {
   significance?: string;
   location?: string;
   notes?: string;
+  planId?: string;
+  planContribution?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -176,7 +186,93 @@ export interface UserPreferences {
   sampleDataLoaded?: boolean;
 }
 
-export type ScreenMode = 'year' | 'month' | 'calendar' | 'daily' | 'analytics' | 'search';
+export type ScreenMode =
+  | 'year'
+  | 'month'
+  | 'calendar'
+  | 'daily'
+  | 'analytics'
+  | 'search'
+  | 'plans'
+  | 'plan-detail';
+
+export type PacingType = 'linear' | 'ramp_up' | 'front_loaded';
+
+export type PlanStatus = 'active' | 'completed' | 'archived';
+
+export type PlanCategory = 'work' | 'fitness' | 'learning' | 'project' | 'personal';
+
+export interface PlanMilestone {
+  id: string;
+  title: string;
+  targetPercent: number; // e.g. 25, 50, 75, 100
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LifePlan {
+  id: string;
+  title: string;
+  statement: string;
+  category: PlanCategory;
+  startDate: string; // YYYY-MM-DD
+  targetDate: string; // YYYY-MM-DD
+  unitLabel: string; // e.g. "Hours", "Sessions", "Commits", "Km"
+  targetValue: number;
+  pacingType: PacingType;
+  milestones: PlanMilestone[];
+  status: PlanStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PaceStatus = 'ahead' | 'on_pace' | 'behind';
+
+export interface EvaluatedMilestone extends PlanMilestone {
+  targetValue: number;
+  isReached: boolean;
+  reachedDate?: string;
+  reachedValue?: number;
+}
+
+export interface LinkedPlanEntry {
+  entryId: string;
+  date: string;
+  category: PlanCategory;
+  title: string;
+  contribution: number;
+  unitLabel: string;
+  notes?: string;
+}
+
+export interface PlanTrajectoryDataPoint {
+  date: string; // YYYY-MM-DD
+  dayIndex: number;
+  expectedValue: number;
+  expectedPercent: number;
+  actualValue: number | null; // null for future dates
+  actualPercent: number | null;
+  dailyContribution: number;
+}
+
+export interface PlanProgressSummary {
+  plan: LifePlan;
+  asOfDate: string;
+  totalDays: number;
+  elapsedDays: number;
+  remainingDays: number;
+  expectedValue: number;
+  expectedPercent: number;
+  actualValue: number;
+  actualPercent: number;
+  varianceValue: number; // actual - expected
+  variancePercent: number; // actualPercent - expectedPercent
+  paceStatus: PaceStatus;
+  isComplete: boolean;
+  milestones: EvaluatedMilestone[];
+  linkedEntries: LinkedPlanEntry[];
+  chartData: PlanTrajectoryDataPoint[];
+}
 
 export interface SearchResultItem {
   id: string;

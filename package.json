@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npx -y tsx src/services/__tests__/planService.test.ts && npx -y tsx src/services/__tests__/storage.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

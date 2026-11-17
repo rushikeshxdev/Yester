@@ -8,13 +8,15 @@ import {
   PersonalEntry,
   HealthEntry,
   DailyReflection,
+  LifePlan,
 } from '../types';
-import { generateSampleRecords } from './sampleData';
+import { generateSampleRecords, generateSamplePlans } from './sampleData';
 
 const SCHEMA_VERSION = 1;
 const STORAGE_KEYS = {
   VERSION: 'yester_schema_version',
   RECORDS: `yester_records_v${SCHEMA_VERSION}`,
+  PLANS: `yester_plans_v1`,
   PREFERENCES: `yester_preferences_v${SCHEMA_VERSION}`,
   LEGACY_RECORDS: `life_os_records_v${SCHEMA_VERSION}`,
   LEGACY_PREFERENCES: `life_os_preferences_v${SCHEMA_VERSION}`,
@@ -48,6 +50,78 @@ function notifyListeners(): void {
   });
 }
 
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      // Fallback below
+    }
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function migrateRecordsData(records: Record<string, DailyRecord>): { records: Record<string, DailyRecord>; changed: boolean } {
+  let changed = false;
+  const now = new Date().toISOString();
+
+  for (const [, record] of Object.entries(records)) {
+    if (!record) continue;
+
+    const checkEntry = (entry: any, defaultIdPrefix: string) => {
+      if (!entry) return;
+      if (!entry.id) {
+        entry.id = `${defaultIdPrefix}-${generateUUID()}`;
+        changed = true;
+      }
+      if (!entry.createdAt) {
+        entry.createdAt = record.createdAt || now;
+        changed = true;
+      }
+      if (!entry.updatedAt) {
+        entry.updatedAt = record.updatedAt || now;
+        changed = true;
+      }
+    };
+
+    if (Array.isArray(record.work)) {
+      record.work.forEach((w) => checkEntry(w, 'work'));
+    }
+    if (Array.isArray(record.fitness)) {
+      record.fitness.forEach((f) => checkEntry(f, 'fit'));
+    }
+    if (Array.isArray(record.learning)) {
+      record.learning.forEach((l) => checkEntry(l, 'learn'));
+    }
+    if (Array.isArray(record.projects)) {
+      record.projects.forEach((p) => checkEntry(p, 'proj'));
+    }
+    if (Array.isArray(record.personal)) {
+      record.personal.forEach((p) => checkEntry(p, 'pers'));
+    }
+    if (record.health) {
+      checkEntry(record.health, 'health');
+      if (Array.isArray(record.health.habits)) {
+        record.health.habits.forEach((h) => {
+          if (!h.id) {
+            h.id = `h-${generateUUID()}`;
+            changed = true;
+          }
+        });
+      }
+    }
+    if (record.reflection) {
+      checkEntry(record.reflection, 'refl');
+    }
+  }
+
+  return { records, changed };
+}
+
 // Initialize and ensure storage integrity
 export function initStorage(): void {
   try {
@@ -76,6 +150,31 @@ export function initStorage(): void {
       } else {
         const sample = generateSampleRecords();
         localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(sample));
+      }
+    }
+
+    // Perform idempotent schema migration to ensure all entries have stable UUIDs & timestamps
+    const currentRecords = getAllDailyRecords();
+    const { records: migratedRecords, changed } = migrateRecordsData(currentRecords);
+    if (changed) {
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(migratedRecords));
+    }
+
+    // Initialize plans storage key
+    const rawPlans = localStorage.getItem(STORAGE_KEYS.PLANS);
+    let parsedPlans: Record<string, LifePlan> | null = null;
+    try {
+      if (rawPlans) parsedPlans = JSON.parse(rawPlans);
+    } catch {
+      parsedPlans = null;
+    }
+    const prefs = getUserPreferences();
+    if (!parsedPlans || Object.keys(parsedPlans).length === 0) {
+      if (prefs.sampleDataLoaded) {
+        const samplePlans = generateSamplePlans();
+        localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(samplePlans));
+      } else {
+        localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify({}));
       }
     }
   } catch (error) {
@@ -280,12 +379,84 @@ export function updateDailyReflection(dateKey: string, reflection: DailyReflecti
   saveDailyRecord(record);
 }
 
+// ---------------------------------------------------------
+// Life Plans Operations
+// ---------------------------------------------------------
+
+export function getAllPlans(): Record<string, LifePlan> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.PLANS);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to parse plans from storage:', err);
+    return {};
+  }
+}
+
+export function getPlanById(id: string): LifePlan | null {
+  const all = getAllPlans();
+  return all[id] || null;
+}
+
+export function savePlan(plan: LifePlan): LifePlan {
+  try {
+    const all = getAllPlans();
+    const now = new Date().toISOString();
+    const existing = all[plan.id];
+    const updatedPlan: LifePlan = {
+      ...plan,
+      id: plan.id || `plan-${generateUUID()}`,
+      createdAt: existing ? existing.createdAt : (plan.createdAt || now),
+      updatedAt: now,
+    };
+    all[updatedPlan.id] = updatedPlan;
+    localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(all));
+    notifyListeners();
+    return updatedPlan;
+  } catch (err) {
+    console.error('Failed to save plan:', err);
+    return plan;
+  }
+}
+
+export function archivePlan(id: string): void {
+  const plan = getPlanById(id);
+  if (!plan) return;
+  savePlan({ ...plan, status: 'archived' });
+}
+
+export function completePlan(id: string): void {
+  const plan = getPlanById(id);
+  if (!plan) return;
+  savePlan({ ...plan, status: 'completed' });
+}
+
+export function deletePlan(id: string): void {
+  try {
+    const all = getAllPlans();
+    if (all[id]) {
+      delete all[id];
+      localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(all));
+      notifyListeners();
+    }
+  } catch (err) {
+    console.error('Failed to delete plan:', err);
+  }
+}
+
 // Sample and Data Management
 export function loadDemonstrationData(): void {
   const sample = generateSampleRecords();
   const all = getAllDailyRecords();
   const merged = { ...all, ...sample };
   localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+
+  const samplePlans = generateSamplePlans();
+  const allPlans = getAllPlans();
+  const mergedPlans = { ...allPlans, ...samplePlans };
+  localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(mergedPlans));
+
   saveUserPreferences({ sampleDataLoaded: true });
   notifyListeners();
 }
@@ -299,24 +470,44 @@ export function clearDemonstrationData(): void {
     }
   }
   localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(filtered));
+
+  const samplePlanIds = new Set([
+    'plan-backend-eng',
+    'plan-marathon',
+    'plan-distributed-learning',
+    'plan-completed-rust',
+    'plan-archived-french',
+  ]);
+  const allPlans = getAllPlans();
+  const filteredPlans: Record<string, LifePlan> = {};
+  for (const [id, plan] of Object.entries(allPlans)) {
+    if (!samplePlanIds.has(id)) {
+      filteredPlans[id] = plan;
+    }
+  }
+  localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(filteredPlans));
+
   saveUserPreferences({ sampleDataLoaded: false });
   notifyListeners();
 }
 
 export function clearAllUserData(): void {
   localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify({}));
+  localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify({}));
   saveUserPreferences({ sampleDataLoaded: false });
   notifyListeners();
 }
 
 export function exportBackupJSON(): string {
   const allRecords = getAllDailyRecords();
+  const allPlans = getAllPlans();
   const prefs = getUserPreferences();
   const backup = {
     version: SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     preferences: prefs,
     records: allRecords,
+    plans: allPlans,
   };
   return JSON.stringify(backup, null, 2);
 }
@@ -324,10 +515,14 @@ export function exportBackupJSON(): string {
 export function importBackupJSON(jsonString: string): boolean {
   try {
     const data = JSON.parse(jsonString);
-    if (data && typeof data === 'object' && data.records) {
-      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(data.records));
-      if (data.preferences) {
+    if (data && typeof data === 'object' && data.records && typeof data.records === 'object') {
+      const { records: migratedRecords } = migrateRecordsData(data.records);
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(migratedRecords));
+      if (data.preferences && typeof data.preferences === 'object') {
         localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(data.preferences));
+      }
+      if (data.plans && typeof data.plans === 'object') {
+        localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(data.plans));
       }
       notifyListeners();
       return true;

@@ -1,4 +1,4 @@
-import { DailyRecord } from '../types';
+import { DailyRecord, LifePlan } from '../types';
 import { formatDateKey } from '../utils/dateUtils';
 
 export function generateSampleRecords(): Record<string, DailyRecord> {
@@ -44,6 +44,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         whatILearned: 'Cooperative rebalancing requires strict epoch monotonically increasing monotonic counters across nodes.',
         reflections: 'Clean mathematical modeling upfront saved days of chaotic race condition debugging.',
         notes: 'Follow up with SRE team tomorrow morning on staging canary metrics.',
+        planId: 'plan-backend-eng',
+        planContribution: 8,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -70,6 +72,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         bodyweightKg: 81.4,
         personalRecords: ['Bench Press 105kg x 6 clean reps'],
         notes: 'Explosive concentric phase on bench felt effortless today. Left shoulder impingement completely gone.',
+        planId: 'plan-marathon',
+        planContribution: 15,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -87,6 +91,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         whatToImprove: 'Need to write a simulated network partition test harness in Go to inspect election safety during split votes.',
         practicalImplementation: 'Sketched the state machine replication transition diagram for joint membership.',
         notes: 'Excellent clarity in Section 4.3 of the dissertation regarding log matching invariant.',
+        planId: 'plan-distributed-learning',
+        planContribution: 2,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -129,26 +135,6 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         updatedAt: new Date().toISOString(),
       }
     ],
-    health: {
-      id: 'health-sample-1',
-      date: todayKey,
-      sleepHours: 7.9,
-      sleepQuality: 'restful',
-      waterIntakeLiters: 3.4,
-      habits: [
-        { id: 'h-1', name: 'No screens 60m before sleep', completed: true },
-        { id: 'h-2', name: 'Cold shower / morning exposure', completed: true },
-        { id: 'h-3', name: 'Daily journal reflection', completed: true },
-        { id: 'h-4', name: 'Read minimum 30 minutes', completed: true },
-      ],
-      customMetrics: [
-        { id: 'cm-1', name: 'Resting Heart Rate', value: 51, unit: 'bpm' },
-        { id: 'cm-2', name: 'Deep Sleep Ratio', value: 24, unit: '%' }
-      ],
-      notes: 'High cognitive energy all morning.',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
     reflection: {
       id: 'refl-sample-1',
       date: todayKey,
@@ -162,6 +148,114 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         'Review Raft leader transfer protocol.',
       ],
       freeformNotes: 'Quiet discipline compounds imperceptibly every single day. The calendar reflects reality.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  };
+
+  // Sample: Yesterday (for Yesterday's Intent & Habit Carry-over)
+  const yesterdayObj = new Date(now);
+  yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+  const yesterdayKey = formatDateKey(
+    yesterdayObj.getFullYear(),
+    yesterdayObj.getMonth() + 1,
+    yesterdayObj.getDate()
+  );
+
+  records[yesterdayKey] = {
+    id: yesterdayKey,
+    date: yesterdayKey,
+    isSampleData: true,
+    summary: 'Consensus engine performance benchmarks, interval track session, and distributed tracing setup.',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    work: [
+      {
+        id: 'work-sample-yesterday',
+        date: yesterdayKey,
+        organization: 'Helios Cloud Infrastructure',
+        project: 'Event Broker Engine v2',
+        role: 'Principal Systems Architect',
+        tasksPerformed: [
+          'Engineered Raft heartbeat timer batching mechanism under heavy network jitter.',
+          'Wrote integration tests for cooperative partition reassignment edge cases.',
+        ],
+        problemsIdentified: 'Network jitter causing spurious leader election timeouts.',
+        solutionImplemented: 'Introduced randomized election timeouts with adaptive backoff window.',
+        technologiesUsed: ['Rust', 'Tokio', 'eBPF'],
+        outcomeImpact: 'Zero spurious re-elections during simulated 15% packet loss.',
+        evidenceLinks: [],
+        planId: 'plan-backend-eng',
+        planContribution: 6,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    ],
+    fitness: [
+      {
+        id: 'fit-sample-yesterday',
+        date: yesterdayKey,
+        workoutType: 'Cardio',
+        muscleGroups: ['Legs', 'Cardiovascular'],
+        exercises: [],
+        cardio: {
+          type: 'Zone 2 Aerobic Run',
+          durationMinutes: 48,
+          distanceKm: 8.5,
+          heartRateAvg: 136,
+        },
+        workoutDurationMinutes: 48,
+        notes: 'Smooth, relaxed cadence. Breathing nasal.',
+        planId: 'plan-marathon',
+        planContribution: 9,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    ],
+    learning: [
+      {
+        id: 'learn-sample-yesterday',
+        date: yesterdayKey,
+        subject: 'Distributed Systems',
+        technologyOrConcept: 'Paxos Synod Invariants & Quorum Intersections',
+        learningSource: 'Lamport "Paxos Made Simple"',
+        studyDurationMinutes: 60,
+        whatIUnderstood: 'Any two quorums must share at least one acceptor to guarantee monotonicity of proposal numbers.',
+        planId: 'plan-distributed-learning',
+        planContribution: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    ],
+    projects: [],
+    personal: [],
+    health: {
+      id: 'health-sample-yesterday',
+      date: yesterdayKey,
+      sleepHours: 7.8,
+      sleepQuality: 'restful',
+      waterIntakeLiters: 3.2,
+      habits: [
+        { id: 'h-y1', name: 'No screens 60m before sleep', completed: true },
+        { id: 'h-y2', name: 'Cold shower / morning exposure', completed: true },
+        { id: 'h-y3', name: 'Daily journal reflection', completed: true },
+        { id: 'h-y4', name: 'Read minimum 30 minutes', completed: true },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    reflection: {
+      id: 'refl-sample-yesterday',
+      date: yesterdayKey,
+      wentWell: 'Deep uninterrupted focus on consensus stability.',
+      wentWrong: 'Skipped mobility stretches post-run.',
+      learned: 'Distributed systems invariants are only as strong as the correctness of your failure domain assumptions.',
+      prioritiesTomorrow: [
+        'Deploy canary build for epoch rebalancer on staging cluster.',
+        'Deadlift heavy volume session (5x3).',
+        'Review Raft leader transfer protocol.',
+      ],
+      freeformNotes: 'The compound effect of deliberate daily effort is indisputable.',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -198,6 +292,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
           { id: 'ev-3', label: 'PR #1418 - RAII Trace Guard', url: 'https://github.com/example/engine/pull/1418' }
         ],
         whatILearned: 'Never rely on ambient thread context in asynchronous coroutine environments.',
+        planId: 'plan-backend-eng',
+        planContribution: 7,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -217,6 +313,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         workoutDurationMinutes: 70,
         bodyweightKg: 81.2,
         notes: 'Felt powerful off the floor. Maintained neutral spine on all sets.',
+        planId: 'plan-marathon',
+        planContribution: 12,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -231,6 +329,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         studyDurationMinutes: 60,
         problemsSolved: ['Compared write amplification vs read amplification in RocksDB workloads.'],
         whatIUnderstood: 'Leveled compaction bounds worst-case read latency at the cost of higher background write amplification.',
+        planId: 'plan-distributed-learning',
+        planContribution: 1,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -315,6 +415,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         },
         workoutDurationMinutes: 52,
         notes: 'Paced comfortably at 5:00/km. Breathing remained nasal throughout.',
+        planId: 'plan-marathon',
+        planContribution: 10,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -329,6 +431,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         studyDurationMinutes: 90,
         problemsSolved: ['Understood tree-based verification mechanism for draft tokens.'],
         whatIUnderstood: 'Speculative decoding achieves 2-3x speedup with zero degradation in output distribution.',
+        planId: 'plan-distributed-learning',
+        planContribution: 2,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -341,6 +445,8 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
         objective: 'Add asynchronous file streaming iterator.',
         tasksCompleted: ['Wrote streaming unit tests with mock I/O failure injection.'],
         progressPercentage: 100,
+        planId: 'plan-completed-rust',
+        planContribution: 50,
         repositoryLinks: [
           { id: 'repo-2', label: 'Merged PR #82', url: 'https://github.com/tokio-rs/tokio/pull/82' }
         ],
@@ -386,5 +492,240 @@ export function generateSampleRecords(): Record<string, DailyRecord> {
   };
 
   return records;
+}
+
+export function generateSamplePlans(): Record<string, LifePlan> {
+  const now = new Date();
+
+  const subDays = (d: Date, days: number): string => {
+    const res = new Date(d);
+    res.setDate(res.getDate() - days);
+    return res.toISOString().split('T')[0];
+  };
+
+  const addDays = (d: Date, days: number): string => {
+    const res = new Date(d);
+    res.setDate(res.getDate() + days);
+    return res.toISOString().split('T')[0];
+  };
+
+  const plan1: LifePlan = {
+    id: 'plan-backend-eng',
+    title: 'Distributed Systems Mastery',
+    statement: 'Architect high-throughput event streaming systems and master distributed consensus protocols.',
+    category: 'work',
+    startDate: subDays(now, 30),
+    targetDate: addDays(now, 60),
+    unitLabel: 'Engineering Hours',
+    targetValue: 120,
+    pacingType: 'ramp_up',
+    status: 'active',
+    milestones: [
+      {
+        id: 'm-1',
+        title: 'Foundations & Architecture ADRs',
+        targetPercent: 25,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'm-2',
+        title: 'Zero-Copy RingBuffer & Protocol Core',
+        targetPercent: 50,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'm-3',
+        title: 'Zero-drop Partition Rebalancing',
+        targetPercent: 75,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'm-4',
+        title: 'Production Canary at Scale',
+        targetPercent: 100,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const plan2: LifePlan = {
+    id: 'plan-marathon',
+    title: 'Sub-4:00 Marathon Conditioning',
+    statement: 'Build aerobic capacity, weekly progressive volume, and clean metabolic recovery.',
+    category: 'fitness',
+    startDate: subDays(now, 45),
+    targetDate: addDays(now, 75),
+    unitLabel: 'Running Km',
+    targetValue: 500,
+    pacingType: 'linear',
+    status: 'active',
+    milestones: [
+      {
+        id: 'mf-1',
+        title: 'Aerobic Base Established (125km)',
+        targetPercent: 25,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'mf-2',
+        title: 'Half-Marathon Benchmark Under 1:52',
+        targetPercent: 50,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'mf-3',
+        title: '32km Long Run Peak Volume',
+        targetPercent: 75,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'mf-4',
+        title: 'Race Taper & 42.2km Goal Reached',
+        targetPercent: 100,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const plan3: LifePlan = {
+    id: 'plan-distributed-learning',
+    title: 'Core Systems RFCs & Papers',
+    statement: 'Rigorous dissection of consensus algorithms, storage engines, and replication models.',
+    category: 'learning',
+    startDate: subDays(now, 20),
+    targetDate: addDays(now, 40),
+    unitLabel: 'Papers & RFCs',
+    targetValue: 40,
+    pacingType: 'front_loaded',
+    status: 'active',
+    milestones: [
+      {
+        id: 'ml-1',
+        title: 'Raft & Paxos Formal Invariants',
+        targetPercent: 25,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'ml-2',
+        title: 'LSM Trees & RocksDB Architecture',
+        targetPercent: 50,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'ml-3',
+        title: 'Vector Clocks, CRDTs & Dynamo',
+        targetPercent: 75,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'ml-4',
+        title: 'Distributed Systems Synthesis Report',
+        targetPercent: 100,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const plan4: LifePlan = {
+    id: 'plan-completed-rust',
+    title: 'Rust TCP/IP Stack & Async Runtime',
+    statement: 'Implement an asynchronous TCP network stack from RFC specifications to zero-copy benchmarks.',
+    category: 'project',
+    startDate: subDays(now, 90),
+    targetDate: subDays(now, 10),
+    unitLabel: 'Modules & Commits',
+    targetValue: 50,
+    pacingType: 'linear',
+    status: 'completed',
+    milestones: [
+      {
+        id: 'mr-1',
+        title: 'Ethernet & ARP Frame Parser',
+        targetPercent: 25,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'mr-2',
+        title: 'IPv4 Fragmentation & Reassembly',
+        targetPercent: 50,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'mr-3',
+        title: 'TCP State Machine & Sliding Window',
+        targetPercent: 75,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'mr-4',
+        title: 'Tokio Async Driver & 100k Concurrency',
+        targetPercent: 100,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const plan5: LifePlan = {
+    id: 'plan-archived-french',
+    title: 'French B2 CEFR Fluency',
+    statement: 'Achieve conversational fluency and professional technical correspondence in French.',
+    category: 'personal',
+    startDate: subDays(now, 180),
+    targetDate: subDays(now, 30),
+    unitLabel: 'Study Hours',
+    targetValue: 120,
+    pacingType: 'linear',
+    status: 'archived',
+    milestones: [
+      {
+        id: 'mp-1',
+        title: 'A2 Grammar & Vocabulary Mastery',
+        targetPercent: 25,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'mp-2',
+        title: 'B1 Conversational Fluency',
+        targetPercent: 50,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    [plan1.id]: plan1,
+    [plan2.id]: plan2,
+    [plan3.id]: plan3,
+    [plan4.id]: plan4,
+    [plan5.id]: plan5,
+  };
 }
 

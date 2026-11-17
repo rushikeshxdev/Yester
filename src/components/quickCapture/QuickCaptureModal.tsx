@@ -9,6 +9,7 @@ import {
   X,
   ArrowRight,
   Calendar,
+  Check,
 } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
 import {
@@ -22,6 +23,8 @@ import {
   getOrCreateDailyRecord,
   saveDailyRecord,
 } from '../../services/storage';
+import { PlanLinkSelector } from '../daily-entry/shared/PlanLinkSelector';
+import { PlanCategory } from '../../types';
 
 type CategoryType = 'work' | 'fitness' | 'learning' | 'project' | 'personal' | 'health';
 
@@ -46,12 +49,19 @@ export const QuickCaptureModal: React.FC = () => {
   const [noteText, setNoteText] = useState('');
   const [captureDate, setCaptureDate] = useState<string>(quickCapture.initialDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [planId, setPlanId] = useState<string | undefined>(undefined);
+  const [planContribution, setPlanContribution] = useState<number | undefined>(undefined);
+  const [logAnother, setLogAnother] = useState(false);
+  const [savedCount, setSavedCount] = useState(0);
 
   useEffect(() => {
     if (quickCapture.isOpen) {
       setSelectedCat((quickCapture.initialCategory as CategoryType) || 'work');
       setCaptureDate(quickCapture.initialDate);
       setNoteText('');
+      setPlanId(undefined);
+      setPlanContribution(undefined);
+      setSavedCount(0);
     }
   }, [quickCapture]);
 
@@ -71,6 +81,8 @@ export const QuickCaptureModal: React.FC = () => {
         outcomeImpact: text,
         technologiesUsed: [],
         evidenceLinks: [],
+        planId: planId || undefined,
+        planContribution: planId ? (planContribution ?? 1) : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -83,6 +95,8 @@ export const QuickCaptureModal: React.FC = () => {
         workoutDurationMinutes: 45,
         exercises: [{ id: 'ex-1', name: text, sets: 3, reps: 10 }],
         notes: text,
+        planId: planId || undefined,
+        planContribution: planId ? (planContribution ?? 1) : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -95,6 +109,8 @@ export const QuickCaptureModal: React.FC = () => {
         learningSource: 'Self Study',
         studyDurationMinutes: 30,
         notes: text,
+        planId: planId || undefined,
+        planContribution: planId ? (planContribution ?? 1) : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -107,6 +123,8 @@ export const QuickCaptureModal: React.FC = () => {
         tasksCompleted: [text],
         progressPercentage: 50,
         repositoryLinks: [],
+        planId: planId || undefined,
+        planContribution: planId ? (planContribution ?? 1) : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -117,6 +135,8 @@ export const QuickCaptureModal: React.FC = () => {
         title: text.length > 35 ? text.substring(0, 35) + '...' : text,
         type: 'experience',
         description: text,
+        planId: planId || undefined,
+        planContribution: planId ? (planContribution ?? 1) : undefined,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -157,8 +177,13 @@ export const QuickCaptureModal: React.FC = () => {
         : text,
     });
 
-    setNoteText('');
-    closeQuickCapture();
+    if (logAnother) {
+      setSavedCount((c) => c + 1);
+      setNoteText('');
+    } else {
+      setNoteText('');
+      closeQuickCapture();
+    }
   };
 
   return (
@@ -190,7 +215,7 @@ export const QuickCaptureModal: React.FC = () => {
                 onClick={() => setSelectedCat(cat.id)}
                 className={`flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-2xl border transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-[#181D25] border-[#FF7138] text-[#FF7138] ring-1 ring-[#FF7138]/50 shadow-md'
+                    ? 'bg-[#181D25] border-[#FF7138] text-[#FF7138] ring-1 ring-[#FF7138]/50 shadow-md light:bg-[#FCE9E0] light:border-[#E95D2B] light:text-[#191B20]'
                     : 'bg-[#13161A] dark:bg-[#13161A] light:bg-neutral-100 border-[#1E232B] dark:border-[#1E232B] light:border-neutral-300 text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black hover:border-neutral-600'
                 }`}
               >
@@ -202,6 +227,19 @@ export const QuickCaptureModal: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Optional Plan Link Selector for trackable categories */}
+        {selectedCat !== 'health' && (
+          <PlanLinkSelector
+            category={selectedCat as PlanCategory}
+            planId={planId}
+            contribution={planContribution}
+            onChange={(pId, contrib) => {
+              setPlanId(pId);
+              setPlanContribution(contrib);
+            }}
+          />
+        )}
 
         {/* Note Textarea Input (Concept Panel 6) */}
         <div className="space-y-2">
@@ -220,7 +258,7 @@ export const QuickCaptureModal: React.FC = () => {
             autoFocus
           />
 
-          {/* Date Selector Toggle */}
+          {/* Date Selector Toggle & Shortcuts */}
           <div className="flex items-center justify-between text-[11px] font-mono text-neutral-500 pt-1">
             <button
               onClick={() => setShowDatePicker(!showDatePicker)}
@@ -238,9 +276,29 @@ export const QuickCaptureModal: React.FC = () => {
                 type="date"
                 value={captureDate}
                 onChange={(e) => setCaptureDate(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-[#242A35] bg-[#14181F] text-xs font-mono text-white focus:outline-none focus:border-[#FF7138]"
+                className="w-full px-3 py-1.5 rounded-lg border border-[#242A35] light:border-[#D7D5CE] bg-[#14181F] light:bg-[#FFFFFF] text-xs font-mono text-white light:text-[#191B20] focus:outline-none focus:border-[#FF7138]"
               />
             </div>
+          )}
+        </div>
+
+        {/* Batch Logging: "Log another" Toggle & Feedback */}
+        <div className="flex items-center justify-between pt-1">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-mono text-neutral-400 select-none">
+            <input
+              type="checkbox"
+              checked={logAnother}
+              onChange={(e) => setLogAnother(e.target.checked)}
+              className="accent-[#FF7138] rounded cursor-pointer"
+            />
+            <span>Log another (Batch capture)</span>
+          </label>
+
+          {savedCount > 0 && (
+            <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/30">
+              <Check className="w-3 h-3" />
+              <span>{savedCount} logged</span>
+            </span>
           )}
         </div>
 
@@ -249,7 +307,7 @@ export const QuickCaptureModal: React.FC = () => {
           onClick={handleSave}
           className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-[#FF7138] hover:bg-[#FF8352] text-white text-sm font-medium tracking-wide shadow-orange-sm hover:shadow-orange-md hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
         >
-          <span>Save Entry</span>
+          <span>{logAnother ? 'Save & Log Another' : 'Save Entry'}</span>
           <ArrowRight className="w-4 h-4 stroke-[2]" />
         </button>
       </div>

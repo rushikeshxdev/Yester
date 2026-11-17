@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Plus, Edit2, Moon, Droplets, CheckSquare, Square } from 'lucide-react';
+import { Sparkles, Plus, Edit2, Moon, Droplets, CheckSquare, Square, RotateCcw } from 'lucide-react';
 import { HealthEntry } from '../../types';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
@@ -8,12 +8,16 @@ interface HealthSectionProps {
   health?: HealthEntry;
   onEdit: () => void;
   onToggleHabit: (habitId: string) => void;
+  onCopyYesterdayHabits?: () => void;
+  yesterdayHabitsCount?: number;
 }
 
 export const HealthSection: React.FC<HealthSectionProps> = ({
   health,
   onEdit,
   onToggleHabit,
+  onCopyYesterdayHabits,
+  yesterdayHabitsCount = 0,
 }) => {
   const completedHabits = health?.habits?.filter((h) => h.completed).length || 0;
   const totalHabits = health?.habits?.length || 0;
@@ -37,6 +41,17 @@ export const HealthSection: React.FC<HealthSectionProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onCopyYesterdayHabits && yesterdayHabitsCount > 0 && totalHabits === 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={onCopyYesterdayHabits}
+              icon={<RotateCcw className="w-3 h-3 text-[#FF7138]" />}
+              className="text-xs font-mono"
+            >
+              Copy Yesterday's Habits ({yesterdayHabitsCount})
+            </Button>
+          )}
           {health && totalHabits > 0 && (
             <Badge variant="outline" size="sm">
               {completedHabits}/{totalHabits} Habits
@@ -156,19 +171,32 @@ export const HealthSection: React.FC<HealthSectionProps> = ({
           )}
         </div>
       ) : (
-        <div className="p-6 rounded-lg border border-dashed border-[#1E1E1E] dark:border-[#1E1E1E] light:border-neutral-200 text-center">
+        <div className="p-6 rounded-lg border border-dashed border-[#1E1E1E] dark:border-[#1E1E1E] light:border-neutral-200 text-center space-y-3">
           <p className="text-xs font-mono text-neutral-500">
             No health vitals or habits documented for this day.
           </p>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onEdit}
-            icon={<Plus className="w-3 h-3" />}
-            className="mt-2 text-xs font-mono"
-          >
-            Track Health & Habits
-          </Button>
+          <div className="flex items-center justify-center gap-3">
+            {onCopyYesterdayHabits && yesterdayHabitsCount > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={onCopyYesterdayHabits}
+                icon={<RotateCcw className="w-3 h-3 text-[#FF7138]" />}
+                className="text-xs font-mono"
+              >
+                Copy Yesterday's Habits ({yesterdayHabitsCount})
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onEdit}
+              icon={<Plus className="w-3 h-3" />}
+              className="text-xs font-mono"
+            >
+              Track Health & Habits
+            </Button>
+          </div>
         </div>
       )}
     </section>

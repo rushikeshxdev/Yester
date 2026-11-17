@@ -9,6 +9,8 @@ import {
   ArrowLeft,
   Camera,
   X,
+  Compass,
+  AlertCircle,
 } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -90,6 +92,7 @@ export const DailyRecordView: React.FC = () => {
   // Cover image modal state
   const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
   const [customCoverUrl, setCustomCoverUrl] = useState('');
+  const [coverError, setCoverError] = useState('');
 
   // Inline headline editing
   const [isEditingHeadline, setIsEditingHeadline] = useState(false);
@@ -121,6 +124,71 @@ export const DailyRecordView: React.FC = () => {
     d.setDate(currentDateObj.getDate() + 1);
     return formatDateKey(d.getFullYear(), d.getMonth() + 1, d.getDate());
   }, [currentDateObj]);
+
+  // Yesterday's priorities & habits
+  const yesterdayRecord = records[prevDateKey];
+  const yesterdayPriorities = yesterdayRecord?.reflection?.prioritiesTomorrow || [];
+  const [dismissedYesterdayBrief, setDismissedYesterdayBrief] = useState(false);
+  const [addressedPriorities, setAddressedPriorities] = useState<Set<number>>(new Set());
+
+  // Copy yesterday's habits
+  const yesterdayHabits = yesterdayRecord?.health?.habits || [];
+  const handleCopyYesterdayHabits = () => {
+    if (yesterdayHabits.length === 0) return;
+    const now = new Date().toISOString();
+    const currentHealth = record.health || {
+      id: `health-${Date.now()}`,
+      date: selectedDate,
+      sleepHours: 7.5,
+      waterIntakeLiters: 2.5,
+      habits: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const copiedHabits = yesterdayHabits.map((h) => ({
+      id: `h-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: h.name,
+      completed: false,
+    }));
+
+    updateHealthEntry(selectedDate, {
+      ...currentHealth,
+      habits: copiedHabits,
+    });
+  };
+
+  const handlePromoteToWork = (priorityText: string) => {
+    setModalCategory('work');
+    setEditingEntry({
+      id: `work-${Date.now()}`,
+      date: selectedDate,
+      organization: 'Priority Focus',
+      project: priorityText.length > 30 ? priorityText.substring(0, 30) + '...' : priorityText,
+      tasksPerformed: [priorityText],
+      technologiesUsed: [],
+      evidenceLinks: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    setModalOpen(true);
+  };
+
+  const handlePromoteToProject = (priorityText: string) => {
+    setModalCategory('project');
+    setEditingEntry({
+      id: `proj-${Date.now()}`,
+      date: selectedDate,
+      projectName: priorityText.length > 25 ? priorityText.substring(0, 25) + '...' : priorityText,
+      objective: priorityText,
+      tasksCompleted: [priorityText],
+      progressPercentage: 50,
+      repositoryLinks: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    setModalOpen(true);
+  };
 
   const handleOpenAddModal = (category: ActivityCategory | 'reflection') => {
     setModalCategory(category);
@@ -175,14 +243,26 @@ export const DailyRecordView: React.FC = () => {
       coverImage: url,
     });
     setIsCoverModalOpen(false);
+    setCoverError('');
   };
 
   const handleSaveCustomCover = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customCoverUrl.trim()) {
-      handleSelectCover(customCoverUrl.trim());
-      setCustomCoverUrl('');
+    const url = customCoverUrl.trim();
+    if (!url) return;
+
+    if (url.startsWith('data:image/') || url.length > 2048) {
+      setCoverError('Base64 images and URLs over 2,048 characters are disabled to protect offline local storage quota. Please enter a valid HTTPS image URL.');
+      return;
     }
+
+    if (!/^https?:\/\/.+/i.test(url)) {
+      setCoverError('Please provide a valid HTTP/HTTPS image URL.');
+      return;
+    }
+
+    handleSelectCover(url);
+    setCustomCoverUrl('');
   };
 
   // Category counts for the pill bar (Concept Panel 5)
@@ -300,7 +380,7 @@ export const DailyRecordView: React.FC = () => {
                   value={headlineInput}
                   onChange={(e) => setHeadlineInput(e.target.value)}
                   placeholder="Enter a daily epigraph or headline..."
-                  className="w-full px-3 py-2 text-sm font-serif rounded-lg border border-[#2B3340] bg-[#14181F] text-white focus:outline-none focus:border-[#FF7138]"
+                  className="w-full px-3 py-2 text-sm font-serif rounded-lg border border-[#2B3340] dark:border-[#2B3340] light:border-[#D7D5CE] bg-[#14181F] dark:bg-[#14181F] light:bg-[#FFFFFF] text-white dark:text-white light:text-[#191B20] focus:outline-none focus:border-[#FF7138]"
                   autoFocus
                 />
                 <div className="flex items-center gap-2">
@@ -341,6 +421,9 @@ export const DailyRecordView: React.FC = () => {
             <img
               src={record.coverImage || COVER_PRESETS[0].url}
               alt="Day Memory Cover"
+              onError={(e) => {
+                e.currentTarget.src = COVER_PRESETS[0].url;
+              }}
               className="w-full h-full object-cover brightness-75 group-hover:scale-105 group-hover:brightness-90 transition-all duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
@@ -364,8 +447,8 @@ export const DailyRecordView: React.FC = () => {
                 onClick={() => handleOpenAddModal(pill.category as ActivityCategory)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-sans transition-all cursor-pointer ${
                   hasEntries
-                    ? 'bg-[#14181F] text-white border border-[#232934] shadow-sm'
-                    : 'bg-[#0E1115] text-neutral-500 border border-[#1A1F26] hover:text-neutral-300'
+                    ? 'bg-[#14181F] text-white border border-[#232934] shadow-sm light:bg-[#FFFFFF] light:border-[#E5E3DC] light:text-[#191B20]'
+                    : 'bg-[#0E1115] text-neutral-500 border border-[#1A1F26] hover:text-neutral-300 light:bg-[#F8F7F4] light:border-[#E5E3DC] light:text-[#626872]'
                 }`}
               >
                 <span
@@ -380,6 +463,101 @@ export const DailyRecordView: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Yesterday's Intent ➔ Today's Brief Banner (Section 11.1) */}
+        {!dismissedYesterdayBrief && yesterdayPriorities.length > 0 && (
+          <div className="p-5 rounded-2xl bg-[#0F1318] dark:bg-[#0F1318] light:bg-neutral-50 border border-[#232A35] dark:border-[#232A35] light:border-neutral-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-[#FF7138]/10 text-[#FF7138]">
+                  <Compass className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-mono uppercase tracking-wider font-bold text-white dark:text-white light:text-neutral-900 flex items-center gap-2">
+                    <span>Yesterday's Intent &bull; Today's Brief</span>
+                    <span className="text-[10px] text-neutral-500 font-normal">
+                      (from {prevDateKey} reflection)
+                    </span>
+                  </h3>
+                  <p className="text-[11px] font-sans text-neutral-400">
+                    Priorities established yesterday waiting for today's action.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDismissedYesterdayBrief(true)}
+                className="text-xs font-mono text-neutral-500 hover:text-white dark:hover:text-white light:hover:text-black transition-colors"
+                title="Dismiss brief"
+              >
+                Dismiss
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {yesterdayPriorities.map((priority, idx) => {
+                const isAddressed = addressedPriorities.has(idx);
+                return (
+                  <div
+                    key={idx}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                      isAddressed
+                        ? 'bg-[#14181F]/50 border-[#1E232B] opacity-60 light:bg-[#F8F7F4]/60 light:border-[#E5E3DC]'
+                        : 'bg-[#14181F] border-[#222833] light:bg-[#F8F7F4] light:border-[#E5E3DC] light:text-[#191B20]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="w-5 h-5 rounded-full bg-[#1F2633] text-[#FF7138] font-mono text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span
+                        className={`text-xs font-sans ${
+                          isAddressed
+                            ? 'line-through text-neutral-500'
+                            : 'text-white dark:text-white light:text-neutral-900 font-medium'
+                        }`}
+                      >
+                        {priority}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 sm:self-auto self-end">
+                      <button
+                        onClick={() => handlePromoteToWork(priority)}
+                        className="px-2.5 py-1 rounded bg-[#1C222B] hover:bg-[#252D3A] text-[10px] font-mono text-neutral-300 hover:text-white transition-colors light:bg-[#FFFFFF] light:border light:border-[#D7D5CE] light:text-[#191B20] light:hover:border-[#E95D2B]"
+                      >
+                        + Work
+                      </button>
+                      <button
+                        onClick={() => handlePromoteToProject(priority)}
+                        className="px-2.5 py-1 rounded bg-[#1C222B] hover:bg-[#252D3A] text-[10px] font-mono text-neutral-300 hover:text-white transition-colors light:bg-[#FFFFFF] light:border light:border-[#D7D5CE] light:text-[#191B20] light:hover:border-[#E95D2B]"
+                      >
+                        + Project
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updated = new Set(addressedPriorities);
+                          if (updated.has(idx)) {
+                            updated.delete(idx);
+                          } else {
+                            updated.add(idx);
+                          }
+                          setAddressedPriorities(updated);
+                        }}
+                        className={`px-2.5 py-1 rounded text-[10px] font-mono transition-colors ${
+                          isAddressed
+                            ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-[#1C222B] hover:bg-[#252D3A] text-neutral-400 light:bg-[#FFFFFF] light:border light:border-[#D7D5CE] light:text-[#191B20] light:hover:border-[#E95D2B]'
+                        }`}
+                      >
+                        {isAddressed ? '✓ Addressed' : 'Done'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Vertical Editorial Sections A to G */}
         <div className="space-y-10 pt-2">
@@ -428,6 +606,8 @@ export const DailyRecordView: React.FC = () => {
             health={record.health}
             onEdit={() => handleOpenAddModal('health')}
             onToggleHabit={handleToggleHabit}
+            onCopyYesterdayHabits={handleCopyYesterdayHabits}
+            yesterdayHabitsCount={yesterdayHabits.length}
           />
 
           {/* Section G: Evening Reflection */}
@@ -514,6 +694,12 @@ export const DailyRecordView: React.FC = () => {
               <label className="text-xs font-mono text-neutral-400 dark:text-neutral-400 light:text-neutral-600 block">
                 Or Custom Image URL
               </label>
+              {coverError && (
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-red-400 bg-red-950/30 border border-red-500/30 p-2 rounded-lg">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{coverError}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <input
                   type="url"

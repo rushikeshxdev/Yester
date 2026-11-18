@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   ChevronLeft,
@@ -265,39 +265,117 @@ export const DailyRecordView: React.FC = () => {
     setCustomCoverUrl('');
   };
 
-  // Category counts for the pill bar (Concept Panel 5)
-  const categoryPills = [
-    {
-      category: 'work',
-      label: 'Work',
-      count: record.work?.length || 0,
-      color: '#FF7138',
-    },
-    {
-      category: 'fitness',
-      label: 'Fitness',
-      count: record.fitness?.length || 0,
-      color: '#4A72B2',
-    },
-    {
-      category: 'learning',
-      label: 'Learning',
-      count: record.learning?.length || 0,
-      color: '#3FB950',
-    },
-    {
-      category: 'personal',
-      label: 'Personal',
-      count: record.personal?.length || 0,
-      color: '#E5A84B',
-    },
-    {
-      category: 'projects',
-      label: 'Projects',
-      count: record.projects?.length || 0,
-      color: '#A371F7',
-    },
-  ];
+  // Category counts and navigation metadata for all 7 sections (Concept Panel 5)
+  const categoryPills = useMemo(
+    () => [
+      {
+        category: 'work',
+        label: 'Work',
+        count: record.work?.length || 0,
+        color: '#FF7138',
+      },
+      {
+        category: 'fitness',
+        label: 'Fitness',
+        count: record.fitness?.length || 0,
+        color: '#4A72B2',
+      },
+      {
+        category: 'learning',
+        label: 'Learning',
+        count: record.learning?.length || 0,
+        color: '#3FB950',
+      },
+      {
+        category: 'project',
+        label: 'Projects',
+        count: record.projects?.length || 0,
+        color: '#A371F7',
+      },
+      {
+        category: 'personal',
+        label: 'Personal',
+        count: record.personal?.length || 0,
+        color: '#E5A84B',
+      },
+      {
+        category: 'health',
+        label: 'Health',
+        count: (record.health?.habits?.length || 0) + (record.health?.customMetrics?.length || 0),
+        color: '#2EA043',
+      },
+      {
+        category: 'reflection',
+        label: 'Reflection',
+        count:
+          record.reflection?.wentWell ||
+          record.reflection?.learned ||
+          record.reflection?.freeformNotes
+            ? 1
+            : 0,
+        color: '#D29922',
+      },
+    ],
+    [record]
+  );
+
+  // Horizontal slider active category state and references
+  const [activeCategory, setActiveCategory] = useState<string>('work');
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const pillsBarRef = useRef<HTMLDivElement>(null);
+
+  const activeSlideIndex = useMemo(() => {
+    const idx = categoryPills.findIndex((p) => p.category === activeCategory);
+    return idx >= 0 ? idx : 0;
+  }, [categoryPills, activeCategory]);
+
+  const scrollToCategory = (category: string) => {
+    setActiveCategory(category);
+    if (!sliderRef.current) return;
+    const targetElement = document.getElementById(`section-${category}`);
+    if (targetElement) {
+      const slider = sliderRef.current;
+      const sliderRect = slider.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+      const offset = targetRect.left - sliderRect.left + slider.scrollLeft;
+      slider.scrollTo({
+        left: offset,
+        behavior: 'smooth',
+      });
+    }
+
+    // Also bring the active pill into view if needed
+    const pillElement = document.getElementById(`pill-${category}`);
+    if (pillElement && pillsBarRef.current) {
+      pillElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  };
+
+  const handleSliderScroll = () => {
+    if (!sliderRef.current) return;
+    const slider = sliderRef.current;
+    const scrollLeft = slider.scrollLeft;
+    const width = slider.clientWidth;
+    if (width > 0) {
+      const index = Math.round(scrollLeft / width);
+      const matchedPill = categoryPills[index];
+      if (matchedPill && matchedPill.category !== activeCategory) {
+        setActiveCategory(matchedPill.category);
+      }
+    }
+  };
+
+  const handlePrevSlide = () => {
+    if (activeSlideIndex > 0) {
+      scrollToCategory(categoryPills[activeSlideIndex - 1].category);
+    }
+  };
+
+  const handleNextSlide = () => {
+    if (activeSlideIndex < categoryPills.length - 1) {
+      scrollToCategory(categoryPills[activeSlideIndex + 1].category);
+    }
+  };
 
   const currentHeadline =
     record.summary ||
@@ -437,29 +515,56 @@ export const DailyRecordView: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Category Pills Row (Concept Panel 5) */}
-        <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+        {/* Category Navigation Pills Bar (Concept Panel 5) */}
+        <div
+          ref={pillsBarRef}
+          className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none scroll-smooth"
+        >
           {categoryPills.map((pill) => {
             const hasEntries = pill.count > 0;
+            const isActive = activeCategory === pill.category;
             return (
-              <button
+              <div
+                id={`pill-${pill.category}`}
                 key={pill.category}
-                onClick={() => handleOpenAddModal(pill.category as ActivityCategory)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-sans transition-all cursor-pointer ${
-                  hasEntries
-                    ? 'bg-[#14181F] text-white border border-[#232934] shadow-sm light:bg-[#FFFFFF] light:border-[#E5E3DC] light:text-[#191B20]'
-                    : 'bg-[#0E1115] text-neutral-500 border border-[#1A1F26] hover:text-neutral-300 light:bg-[#F8F7F4] light:border-[#E5E3DC] light:text-[#626872]'
+                className={`group flex items-center rounded-xl text-xs font-sans transition-all border shrink-0 ${
+                  isActive
+                    ? 'bg-[#1C222C] text-white border-[#FF7138] ring-1 ring-[#FF7138]/60 shadow-md light:bg-[#FCE9E0] light:border-[#E95D2B] light:text-[#191B20]'
+                    : hasEntries
+                    ? 'bg-[#14181F] text-white border-[#232934] shadow-sm light:bg-[#FFFFFF] light:border-[#E5E3DC] light:text-[#191B20] hover:border-neutral-500'
+                    : 'bg-[#0E1115] text-neutral-500 border-[#1A1F26] hover:text-neutral-300 light:bg-[#F8F7F4] light:border-[#E5E3DC] light:text-[#626872]'
                 }`}
               >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: pill.color }}
-                />
-                <span className="font-medium">{pill.label}</span>
-                <span className="font-mono text-[11px] text-neutral-400">
-                  {pill.count} {pill.count === 1 ? 'entry' : 'entries'}
-                </span>
-              </button>
+                {/* Clicking category title & count navigates directly to that section */}
+                <button
+                  type="button"
+                  onClick={() => scrollToCategory(pill.category)}
+                  className="flex items-center gap-2 pl-3.5 pr-2 py-2 cursor-pointer focus:outline-none"
+                  title={`Slide to ${pill.label}`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: pill.color }}
+                  />
+                  <span className="font-medium whitespace-nowrap">{pill.label}</span>
+                  <span className="font-mono text-[11px] opacity-70 whitespace-nowrap">
+                    {pill.count} {pill.count === 1 ? 'entry' : 'entries'}
+                  </span>
+                </button>
+
+                {/* Dedicated '+' button to create new entry for this category */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenAddModal(pill.category as ActivityCategory | 'reflection');
+                  }}
+                  className="px-2.5 py-2 text-neutral-400 hover:text-[#FF7138] dark:hover:text-[#FF7138] light:hover:text-[#E95D2B] transition-colors cursor-pointer border-l border-white/10 dark:border-white/10 light:border-black/10 flex items-center justify-center"
+                  title={`+ Add new ${pill.label} entry`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
             );
           })}
         </div>
@@ -559,62 +664,142 @@ export const DailyRecordView: React.FC = () => {
           </div>
         )}
 
-        {/* Vertical Editorial Sections A to G */}
-        <div className="space-y-10 pt-2">
-          {/* Section A: Work & Professional */}
-          <WorkSection
-            entries={record.work || []}
-            onAdd={() => handleOpenAddModal('work')}
-            onEdit={(entry) => handleOpenEditModal('work', entry)}
-            onDelete={(id) => deleteWorkEntry(selectedDate, id)}
-          />
+        {/* Horizontal Editorial Sections Slider */}
+        <div className="space-y-4 pt-2">
+          {/* Header Controls: Active Section Indicator & Slide Navigation */}
+          <div className="flex items-center justify-between pb-1">
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-400 light:text-neutral-600 font-bold flex items-center gap-2">
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: categoryPills[activeSlideIndex]?.color || '#FF7138' }}
+                />
+                <span>Section: {categoryPills[activeSlideIndex]?.label}</span>
+              </span>
+              <span className="text-[11px] text-neutral-500 font-normal">
+                ({activeSlideIndex + 1} of {categoryPills.length})
+              </span>
+            </div>
 
-          {/* Section B: Physical & Fitness */}
-          <FitnessSection
-            entries={record.fitness || []}
-            onAdd={() => handleOpenAddModal('fitness')}
-            onEdit={(entry) => handleOpenEditModal('fitness', entry)}
-            onDelete={(id) => deleteFitnessEntry(selectedDate, id)}
-          />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevSlide}
+                disabled={activeSlideIndex === 0}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#232934] dark:border-[#232934] light:border-neutral-200 bg-[#14181F] dark:bg-[#14181F] light:bg-white text-xs font-mono text-neutral-300 dark:text-neutral-300 light:text-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#FF7138] transition-colors cursor-pointer shadow-sm"
+                title="Slide to Previous Category"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
+              <button
+                onClick={handleNextSlide}
+                disabled={activeSlideIndex === categoryPills.length - 1}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#232934] dark:border-[#232934] light:border-neutral-200 bg-[#14181F] dark:bg-[#14181F] light:bg-white text-xs font-mono text-neutral-300 dark:text-neutral-300 light:text-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#FF7138] transition-colors cursor-pointer shadow-sm"
+                title="Slide to Next Category"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
 
-          {/* Section C: Learning & Education */}
-          <LearningSection
-            entries={record.learning || []}
-            onAdd={() => handleOpenAddModal('learning')}
-            onEdit={(entry) => handleOpenEditModal('learning', entry)}
-            onDelete={(id) => deleteLearningEntry(selectedDate, id)}
-          />
+          {/* Horizontal Slide Track */}
+          <div
+            ref={sliderRef}
+            onScroll={handleSliderScroll}
+            className="flex gap-8 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-6 pt-1 scrollbar-none"
+            style={{ scrollSnapType: 'x mandatory' }}
+          >
+            {/* Section A: Work & Professional */}
+            <div
+              id="section-work"
+              className="w-full min-w-full shrink-0 snap-start"
+            >
+              <WorkSection
+                entries={record.work || []}
+                onAdd={() => handleOpenAddModal('work')}
+                onEdit={(entry) => handleOpenEditModal('work', entry)}
+                onDelete={(id) => deleteWorkEntry(selectedDate, id)}
+              />
+            </div>
 
-          {/* Section D: Personal Projects */}
-          <ProjectsSection
-            entries={record.projects || []}
-            onAdd={() => handleOpenAddModal('project')}
-            onEdit={(entry) => handleOpenEditModal('project', entry)}
-            onDelete={(id) => deleteProjectEntry(selectedDate, id)}
-          />
+            {/* Section B: Physical & Fitness */}
+            <div
+              id="section-fitness"
+              className="w-full min-w-full shrink-0 snap-start"
+            >
+              <FitnessSection
+                entries={record.fitness || []}
+                onAdd={() => handleOpenAddModal('fitness')}
+                onEdit={(entry) => handleOpenEditModal('fitness', entry)}
+                onDelete={(id) => deleteFitnessEntry(selectedDate, id)}
+              />
+            </div>
 
-          {/* Section E: Personal Life */}
-          <PersonalSection
-            entries={record.personal || []}
-            onAdd={() => handleOpenAddModal('personal')}
-            onEdit={(entry) => handleOpenEditModal('personal', entry)}
-            onDelete={(id) => deletePersonalEntry(selectedDate, id)}
-          />
+            {/* Section C: Learning & Education */}
+            <div
+              id="section-learning"
+              className="w-full min-w-full shrink-0 snap-start"
+            >
+              <LearningSection
+                entries={record.learning || []}
+                onAdd={() => handleOpenAddModal('learning')}
+                onEdit={(entry) => handleOpenEditModal('learning', entry)}
+                onDelete={(id) => deleteLearningEntry(selectedDate, id)}
+              />
+            </div>
 
-          {/* Section F: Health & Vitals */}
-          <HealthSection
-            health={record.health}
-            onEdit={() => handleOpenAddModal('health')}
-            onToggleHabit={handleToggleHabit}
-            onCopyYesterdayHabits={handleCopyYesterdayHabits}
-            yesterdayHabitsCount={yesterdayHabits.length}
-          />
+            {/* Section D: Personal Projects */}
+            <div
+              id="section-project"
+              className="w-full min-w-full shrink-0 snap-start"
+            >
+              <ProjectsSection
+                entries={record.projects || []}
+                onAdd={() => handleOpenAddModal('project')}
+                onEdit={(entry) => handleOpenEditModal('project', entry)}
+                onDelete={(id) => deleteProjectEntry(selectedDate, id)}
+              />
+            </div>
 
-          {/* Section G: Evening Reflection */}
-          <ReflectionSection
-            reflection={record.reflection}
-            onEdit={() => handleOpenAddModal('reflection')}
-          />
+            {/* Section E: Personal Life */}
+            <div
+              id="section-personal"
+              className="w-full min-w-full shrink-0 snap-start"
+            >
+              <PersonalSection
+                entries={record.personal || []}
+                onAdd={() => handleOpenAddModal('personal')}
+                onEdit={(entry) => handleOpenEditModal('personal', entry)}
+                onDelete={(id) => deletePersonalEntry(selectedDate, id)}
+              />
+            </div>
+
+            {/* Section F: Health & Vitals */}
+            <div
+              id="section-health"
+              className="w-full min-w-full shrink-0 snap-start"
+            >
+              <HealthSection
+                health={record.health}
+                onEdit={() => handleOpenAddModal('health')}
+                onToggleHabit={handleToggleHabit}
+                onCopyYesterdayHabits={handleCopyYesterdayHabits}
+                yesterdayHabitsCount={yesterdayHabits.length}
+              />
+            </div>
+
+            {/* Section G: Evening Reflection */}
+            <div
+              id="section-reflection"
+              className="w-full min-w-full shrink-0 snap-start"
+            >
+              <ReflectionSection
+                reflection={record.reflection}
+                onEdit={() => handleOpenAddModal('reflection')}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Daily Record Footer Actions */}

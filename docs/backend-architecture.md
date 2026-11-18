@@ -109,14 +109,19 @@ yester/
 
 ---
 
+---
+
 ## 4. Initial Database Design & Relational Strategy
 
 ### 4.1 Hybrid Relational + Validated JSONB
 - **Relational Backbone:** Core entities (`User`, `DailyRecord`, `DailyEntry`, `LifePlan`, `PlanMilestone`, `UserPreference`) have dedicated tables with UUID primary keys, foreign key constraints (`ON DELETE CASCADE`), indexes, and unique constraints.
 - **Granular `DailyEntry` Table:** Rather than storing dynamic arrays in `DailyRecord`, each entry is an independent row with `category` enum (`WORK`, `FITNESS`, `LEARNING`, `PROJECT`, `PERSONAL`), optional `planId` and `planContribution`, and a validated `payload` JSONB column.
-- **Envelope Attachments:** `HealthData` (habits, sleep, water, custom metrics) and `DailyReflection` (what went well, improvements, tomorrow's brief) are modeled as structured JSONB columns on `DailyRecord` in Stage 1 to minimize unnecessary join overhead while preserving future table extraction capabilities.
-- **Calendar Date Integrity:** All dates are stored as PostgreSQL `DATE` types (`@db.Date`), eliminating UTC time-drift across daylight saving or user travel.
-- **Milestone Evaluation Rule:** Milestones do NOT store completion status as an unverified independent boolean. Milestone completion is dynamically evaluated from valid linked contributions and plan trajectory rules.
+- **Envelope Attachments:** `HealthData` (habits, sleep, water, custom metrics) and `DailyReflection` (what went well, improvements, tomorrow's brief) are modeled as structured JSONB columns on `DailyRecord` in Stage 1 to minimize unnecessary join overhead while preserving future table extraction capabilities. Application-layer validation strictly checks these JSON structures.
+- **Calendar Date Integrity:** All calendar dates (`DailyRecord.date`, `LifePlan.startDate`, `LifePlan.targetDate`) are stored as PostgreSQL `DATE` types (`@db.Date`), eliminating UTC time-drift across daylight saving or user travel. Timestamps (`DateTime` with timezone) are reserved for audit and instant-in-time events (`createdAt`, `updatedAt`, `deletedAt`).
+- **Dynamic Derivation of Plan Progress (No Dual Source of Truth):** `LifePlan` does NOT persist `currentValue` as an independent source of truth. Progress is calculated dynamically by aggregating valid linked `DailyEntry` contributions (`deletedAt IS NULL`).
+- **Dynamic Milestone Evaluation:** `PlanMilestone` does NOT treat `reachedAt` as an independent authoritative boolean. Milestone completion is dynamically derived from underlying entry contributions and trajectory pacing rules.
+- **Strict User Ownership Across Entities:** A `DailyEntry`, its `DailyRecord`, and its referenced `LifePlan` must belong to the exact same user. This tenant boundary is enforced via transactional service validation and composite constraints (`LifePlan(id, userId)` referenced by `DailyEntry(planId, userId)`).
+- **Consistent Audit & Concurrency Fields:** Every independently editable entity consistently supports `id`, `createdAt`, `updatedAt`, and `revision: Int @default(1)`. Soft-deletable entities include `deletedAt: DateTime?`. Revision numbers are incremented atomically on updates for optimistic concurrency protection.
 
 ---
 
@@ -129,19 +134,32 @@ yester/
 5. **Operational Probes:**
    - `GET /api/v1/health` (Liveness probe for process uptime)
    - `GET /api/v1/health/ready` (Readiness probe executing `SELECT 1` against PostgreSQL)
+6. **Pragmatic Controller-Service Architecture:** Use clean Controller -> Service boundaries directly leveraging `PrismaService`. Avoid empty repository abstractions; introduce repositories only where abstraction adds measurable value.
 
 ---
 
 ## 6. Offline-First Synchronization Roadmap (Stage 2+)
 
-1. **Client-Minted UUIDs:** The database accepts valid UUIDs provided by clients on record creation.
-2. **Monotonic Revisions:** Every row maintains an integer `revision` incremented on updates.
-3. **Tombstone Records:** Records marked as deleted retain `deletedAt` timestamps so offline clients can receive deletion events during synchronization batches.
+1. **Client-Minted UUIDs:** The database accepts valid client-generated UUIDs on record creation to facilitate offline capture.
+2. **Atomic Revision Increments:** Every entity maintains an integer `revision` incremented atomically on updates (`WHERE id = $id AND revision = $expectedRevision`).
+3. **Tombstone Records:** Soft-deleted records retain `deletedAt` timestamps so offline clients receive deletion events during synchronization batches.
 4. **Idempotent Upserts:** Retried network requests perform idempotent updates based on record ID and incoming revision matching.
 
 ---
 
 ## 7. Scope Boundaries for Stage 1
 
-- **Included:** NestJS framework setup, strict TypeScript configuration, Docker Compose for PostgreSQL, Prisma schema with initial migration, database service with connection lifecycle, health and readiness endpoints, module boundaries, error handling, validation, tests, and architectural documentation.
+- **Included:** NestJS framework setup in `apps/api`, strict TypeScript configuration, Docker Compose for PostgreSQL 16, Prisma schema with initial migration, database service with connection lifecycle, health and readiness endpoints, module boundaries, error handling, validation, tests, and architectural documentation.
 - **Explicitly Excluded:** Authentication implementation (Stage 2), full CRUD endpoints implementation (Stage 2), microservices, Redis/caching, Kafka/messaging queues, vector databases/AI processing, and live synchronization engine.
+
+---
+
+## 8. Mandatory Architectural Rules (Summary)
+
+1. **Universal Metadata:** All independently editable models implement `id` (UUID), `createdAt`, `updatedAt`, and `revision: Int`. Soft-deletable models implement `deletedAt: DateTime?`.
+2. **Optimistic Concurrency:** Revision increments are atomic; updates check expected revisions to prevent silent overwrites.
+3. **Derived Metrics:** `LifePlan.currentValue` and `PlanMilestone` completion are calculated from linked entries, never stored as independent unverified states.
+4. **Strict Multi-Entity Ownership:** `DailyEntry`, `DailyRecord`, and `LifePlan` must share the same `userId`.
+5. **PostgreSQL Date Types:** Calendar dates are `@db.Date`. Timestamps are `@db.Timestamptz` / `DateTime`.
+6. **Pragmatic Layering:** Controller -> Service directly using `PrismaService`.
+7. **Monorepo Separation:** `apps/web` (Vite + React) and `apps/api` (NestJS) remain completely isolated with shared root workspace orchestration.

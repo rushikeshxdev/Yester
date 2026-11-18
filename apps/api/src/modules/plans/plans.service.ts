@@ -26,16 +26,19 @@ export class PlansService {
     }
 
     // Dynamically derive currentValue from active linked entry contributions (Rule #3)
-    const currentValue = plan.entries.reduce((sum, entry) => {
-      return sum + (entry.planContribution ?? 1);
-    }, 0);
+    const currentValue = plan.entries.reduce(
+      (sum: number, entry: { planContribution: number | null }) => {
+        return sum + (entry.planContribution ?? 1);
+      },
+      0,
+    );
 
     const progressPercent = plan.targetValue > 0
       ? Math.round((currentValue / plan.targetValue) * 1000) / 10
       : 0;
 
     // Dynamically evaluate milestones against derived progress (Rule #4)
-    const evaluatedMilestones = plan.milestones.map((m) => ({
+    const evaluatedMilestones = plan.milestones.map((m: { targetPercent: number; [key: string]: unknown }) => ({
       ...m,
       isReached: progressPercent >= m.targetPercent,
     }));
@@ -59,9 +62,9 @@ export class PlansService {
       },
     });
 
-    return plans.map((plan) => {
+    return plans.map((plan: { targetValue: number; entries: Array<{ planContribution: number | null }>; [key: string]: unknown }) => {
       const currentValue = plan.entries.reduce(
-        (sum, e) => sum + (e.planContribution ?? 1),
+        (sum: number, e: { planContribution: number | null }) => sum + (e.planContribution ?? 1),
         0,
       );
       const progressPercent = plan.targetValue > 0

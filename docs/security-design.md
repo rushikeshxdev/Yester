@@ -63,11 +63,22 @@ Yester records sensitive personal thoughts, health metrics, professional achieve
 
 ---
 
-## 3. Stage 2 Authentication Blueprint
+## 3. Stage 2 Authentication & Session Architecture
 
-While Stage 1 establishes module boundaries using explicit `userId` parameter verification, Stage 2 will introduce production-grade authentication:
-
-1. **Password Hashing:** Passwords hashed using **Argon2id** with high memory cost parameters.
-2. **Stateless JWT Tokens:** Short-lived Access Tokens (15-minute expiration) signed via RS256 or HS256.
-3. **Rotating Refresh Tokens:** HttpOnly, Secure, SameSite=Strict cookies with cryptographic rotation and family revocation on reuse detection.
-4. **Current User Decorator:** A custom `@CurrentUser()` parameter decorator extracting the validated user identity from `request.user`.
+1. **Password Hashing:** Passwords hashed using **Argon2id** (memory cost: 65536, time cost: 3).
+2. **Stateless JWT Access Tokens:** Short-lived Access Tokens (15-minute expiration) kept in-memory on the client, never in localStorage.
+3. **Multi-Device `AuthSession` Architecture:**
+   * A dedicated `auth_sessions` table stores session metadata (`id`, `user_id`, `refresh_token_hash`, `user_agent`, `ip_address`, `is_revoked`, `expires_at`).
+   * Refresh tokens are stored strictly as cryptographic hashes, never plaintext.
+4. **Token Rotation & Family Revocation:**
+   * Each token refresh generates a new access token and a new refresh token.
+   * If a revoked or expired token is presented (reuse attempt), all active sessions for that user family are revoked immediately.
+5. **Secure Cookie Transport & CSRF Protection:**
+   * Refresh tokens are transported exclusively via `HttpOnly, Secure, SameSite=Strict` cookies.
+   * Endpoints accepting refresh cookies (`/auth/refresh`, `/auth/logout`) enforce CSRF protection.
+6. **Strict Route Protection:**
+   * Global `JwtAuthGuard` applied across the entire API by default.
+   * Only `/auth/register`, `/auth/login`, `/auth/refresh`, and `/health/*` are granted `@Public()` exceptions.
+   * `GET /auth/me` and `POST /auth/logout` require valid JWT authentication.
+7. **Rate Limiting:** IP and user-based throttling on authentication endpoints via `@nestjs/throttler` to prevent brute-force attacks.
+8. **Log Sanitization:** Passwords, JWTs, refresh tokens, and personal journal content are strictly excluded from logging.

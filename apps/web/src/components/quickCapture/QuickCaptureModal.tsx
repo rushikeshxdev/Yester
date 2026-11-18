@@ -234,7 +234,7 @@ export const QuickCaptureModal: React.FC = () => {
             category={selectedCat as PlanCategory}
             planId={planId}
             contribution={planContribution}
-            onChange={(pId, contrib) => {
+            onChange={(pId?: string, contrib?: number) => {
               setPlanId(pId);
               setPlanContribution(contrib);
             }}

@@ -1,0 +1,142 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ActivityCategory {
+  WORK
+  FITNESS
+  LEARNING
+  PROJECT
+  PERSONAL
+}
+
+enum PacingType {
+  LINEAR
+  RAMP_UP
+  FRONT_LOADED
+}
+
+enum PlanStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  ARCHIVED
+}
+
+model User {
+  id          String           @id @default(uuid())
+  email       String           @unique
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+  revision    Int              @default(1)
+
+  dailyRecords DailyRecord[]
+  dailyEntries DailyEntry[]
+  plans        LifePlan[]
+  preference   UserPreference?
+
+  @@map("users")
+}
+
+model DailyRecord {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  date        DateTime         @db.Date
+  headline    String?
+  healthData  Json?            @map("health_data")
+  reflection  Json?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  deletedAt   DateTime?        @map("deleted_at")
+  revision    Int              @default(1)
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries     DailyEntry[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_records")
+}
+
+model DailyEntry {
+  id               String           @id @default(uuid())
+  userId           String           @map("user_id")
+  dailyRecordId    String           @map("daily_record_id")
+  category         ActivityCategory
+  title            String
+  planId           String?          @map("plan_id")
+  planContribution Float?           @map("plan_contribution")
+  payload          Json             @default("{}")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+  revision         Int              @default(1)
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyRecord      DailyRecord      @relation(fields: [dailyRecordId], references: [id], onDelete: Cascade)
+  plan             LifePlan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([userId, category])
+  @@index([dailyRecordId])
+  @@index([planId])
+  @@map("daily_entries")
+}
+
+model LifePlan {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  title       String
+  category    ActivityCategory
+  targetValue Float            @map("target_value")
+  startDate   DateTime         @db.Date @map("start_date")
+  targetDate  DateTime         @db.Date @map("target_date")
+  pacingType  PacingType       @default(LINEAR) @map("pacing_type")
+  status      PlanStatus       @default(ACTIVE)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  deletedAt   DateTime?        @map("deleted_at")
+  revision    Int              @default(1)
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries     DailyEntry[]
+  milestones  PlanMilestone[]
+
+  @@unique([id, userId])
+  @@index([userId, status])
+  @@map("life_plans")
+}
+
+model PlanMilestone {
+  id            String           @id @default(uuid())
+  planId        String           @map("plan_id")
+  targetPercent Float            @map("target_percent")
+  targetValue   Float            @map("target_value")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  revision      Int              @default(1)
+
+  plan          LifePlan         @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@map("plan_milestones")
+}
+
+model UserPreference {
+  id        String           @id @default(uuid())
+  userId    String           @unique @map("user_id")
+  theme     String           @default("system")
+  settings  Json?            @default("{}")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  revision  Int              @default(1)
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}

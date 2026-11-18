@@ -23,6 +23,10 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CORS_ORIGIN: string = 'http://localhost:5173';
+
+  @IsString()
+  @IsOptional()
+  JWT_SECRET: string = 'yester-super-secret-dev-jwt-key-2026';
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

@@ -29,19 +29,39 @@ enum PlanStatus {
 }
 
 model User {
-  id          String           @id @default(uuid())
-  email       String           @unique
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  deletedAt   DateTime?
-  revision    Int              @default(1)
+  id           String           @id @default(uuid())
+  email        String           @unique
+  passwordHash String           @map("password_hash")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  deletedAt    DateTime?        @map("deleted_at")
+  revision     Int              @default(1)
 
+  sessions     AuthSession[]
   dailyRecords DailyRecord[]
   dailyEntries DailyEntry[]
   plans        LifePlan[]
   preference   UserPreference?
 
   @@map("users")
+}
+
+model AuthSession {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  refreshTokenHash String    @map("refresh_token_hash")
+  userAgent        String?   @map("user_agent")
+  ipAddress        String?   @map("ip_address")
+  isRevoked        Boolean   @default(false) @map("is_revoked")
+  expiresAt        DateTime  @map("expires_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshTokenHash])
+  @@map("auth_sessions")
 }
 
 model DailyRecord {

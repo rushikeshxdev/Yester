@@ -49,6 +49,7 @@ model User {
 model AuthSession {
   id               String    @id @default(uuid())
   userId           String    @map("user_id")
+  familyId         String    @default(uuid()) @map("family_id")
   refreshTokenHash String    @map("refresh_token_hash")
   userAgent        String?   @map("user_agent")
   ipAddress        String?   @map("ip_address")
@@ -60,6 +61,7 @@ model AuthSession {
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([familyId])
   @@index([refreshTokenHash])
   @@map("auth_sessions")
 }

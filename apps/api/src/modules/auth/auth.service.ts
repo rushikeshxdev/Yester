@@ -218,6 +218,7 @@ export class AuthService {
     await this.prisma.authSession.create({
       data: {
         userId: session.user.id,
+        familyId: session.familyId,
         refreshTokenHash: newRefreshTokenHash,
         ipAddress: ipAddress || session.ipAddress,
         userAgent: userAgent || session.userAgent,

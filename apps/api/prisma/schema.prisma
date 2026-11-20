@@ -114,8 +114,10 @@ model LifePlan {
   id          String           @id @default(uuid())
   userId      String           @map("user_id")
   title       String
+  statement   String?
   category    ActivityCategory
   targetValue Float            @map("target_value")
+  unitLabel   String           @default("units") @map("unit_label")
   startDate   DateTime         @db.Date @map("start_date")
   targetDate  DateTime         @db.Date @map("target_date")
   pacingType  PacingType       @default(LINEAR) @map("pacing_type")
@@ -137,6 +139,7 @@ model LifePlan {
 model PlanMilestone {
   id            String           @id @default(uuid())
   planId        String           @map("plan_id")
+  title         String           @default("Milestone")
   targetPercent Float            @map("target_percent")
   targetValue   Float            @map("target_value")
   createdAt     DateTime         @default(now()) @map("created_at")

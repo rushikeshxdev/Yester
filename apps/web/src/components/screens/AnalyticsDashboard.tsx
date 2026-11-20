@@ -60,6 +60,15 @@ export const AnalyticsDashboard: React.FC = () => {
       description: string;
     }[] = [];
 
+    // Prior period tracking for true dynamic period-over-period deltas
+    const priorYear =
+      selectedMonth === 1 ? selectedYear - 1 : selectedMonth !== null ? selectedYear : selectedYear - 1;
+    const priorMonth =
+      selectedMonth === 1 ? 12 : selectedMonth !== null ? selectedMonth - 1 : null;
+
+    let priorRecordedDaysCount = 0;
+    let priorTotalMilestones = 0;
+
     // Monthly category matrix initialization (1-12)
     const monthlyCategoryMatrix: Record<string, Record<string, number>> = {};
     for (let m = 1; m <= 12; m++) {
@@ -166,6 +175,23 @@ export const AnalyticsDashboard: React.FC = () => {
           }
         });
       }
+
+      // Check if record falls into prior period for true dynamic deltas
+      const matchesPriorYear = recYear === priorYear;
+      const matchesPriorMonth = priorMonth === null || recMonth === priorMonth;
+
+      if (matchesPriorYear && matchesPriorMonth && dayTotal > 0) {
+        priorRecordedDaysCount++;
+        rec.work?.forEach((entry) => {
+          if (entry.outcomeImpact) priorTotalMilestones++;
+        });
+        rec.learning?.forEach((entry) => {
+          if (entry.problemsSolved && entry.problemsSolved.length > 0) priorTotalMilestones++;
+        });
+        rec.personal?.forEach((entry) => {
+          if (entry.type === 'milestone') priorTotalMilestones++;
+        });
+      }
     });
 
     sortedRecordDates.sort();
@@ -216,6 +242,31 @@ export const AnalyticsDashboard: React.FC = () => {
       daysEvaluated > 0
         ? Math.min(100, Number(((recordedDaysCount / daysEvaluated) * 100).toFixed(1)))
         : 0;
+
+    // True dynamic period-over-period deltas from real prior period data
+    const daysRecordedDeltaPct =
+      priorRecordedDaysCount > 0
+        ? Number((((recordedDaysCount - priorRecordedDaysCount) / priorRecordedDaysCount) * 100).toFixed(1))
+        : null;
+
+    const priorDaysEvaluated = priorMonth
+      ? getDaysInMonth(priorYear, priorMonth)
+      : ((priorYear % 4 === 0 && priorYear % 100 !== 0) || priorYear % 400 === 0 ? 366 : 365);
+
+    const priorConsistencyRate =
+      priorDaysEvaluated > 0
+        ? Number(((priorRecordedDaysCount / priorDaysEvaluated) * 100).toFixed(1))
+        : 0;
+
+    const consistencyDeltaPct =
+      priorRecordedDaysCount > 0
+        ? Number((consistencyRate - priorConsistencyRate).toFixed(1))
+        : null;
+
+    const milestonesDelta =
+      priorTotalMilestones > 0
+        ? totalMilestones - priorTotalMilestones
+        : null;
 
     // 4. Annual Heatmap Matrix (365/366 days)
     const startDate = new Date(Date.UTC(selectedYear, 0, 1));
@@ -506,9 +557,24 @@ export const AnalyticsDashboard: React.FC = () => {
       distribution,
       monthlyStacked,
       analyzedPlans,
+      daysRecordedDeltaPct,
+      consistencyDeltaPct,
+      milestonesDelta,
       recentMilestones: milestonesList.slice(0, 6),
     };
   }, [records, plans, selectedYear, selectedMonth, granularity, selectedCategory]);
+
+  // Dynamically extract available years with recorded entries
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<number>();
+    yearsSet.add(contextYear);
+    yearsSet.add(new Date().getFullYear());
+    Object.keys(records).forEach((k) => {
+      const y = parseInt(k.substring(0, 4), 10);
+      if (!isNaN(y)) yearsSet.add(y);
+    });
+    return Array.from(yearsSet).sort((a, b) => b - a);
+  }, [records, contextYear]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-8 select-none">
@@ -524,6 +590,7 @@ export const AnalyticsDashboard: React.FC = () => {
       <AnalyticsFilterBar
         year={selectedYear}
         onYearChange={setSelectedYear}
+        availableYears={availableYears}
         month={selectedMonth}
         onMonthChange={setSelectedMonth}
         granularity={granularity}
@@ -540,21 +607,21 @@ export const AnalyticsDashboard: React.FC = () => {
             value={analyticsData.recordedDaysCount}
             subtitle={`out of ${analyticsData.totalYearDays} calendar days`}
             icon={<CalendarIcon className="w-5 h-5" />}
-            delta={analyticsData.recordedDaysCount > 0 ? 12.0 : null}
+            delta={analyticsData.daysRecordedDeltaPct}
           />
           <KpiStatCard
             title="Consistency Rate"
             value={`${analyticsData.consistencyRate}%`}
             subtitle="evaluated calendar recording ratio"
             icon={<BarChart3 className="w-5 h-5" />}
-            delta={analyticsData.consistencyRate > 0 ? 4.2 : null}
+            delta={analyticsData.consistencyDeltaPct}
           />
           <KpiStatCard
             title="Documented Milestones"
             value={analyticsData.totalMilestones}
             subtitle="significant outcomes achieved"
             icon={<Trophy className="w-5 h-5" />}
-            delta={analyticsData.totalMilestones > 0 ? 2 : null}
+            delta={analyticsData.milestonesDelta}
             isPercentageDelta={false}
           />
           <StreakBadgeCard

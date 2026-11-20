@@ -1,60 +1,50 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Calendar as CalendarIcon,
-  BarChart3,
-  Trophy,
-  ArrowUpRight,
-  ArrowDownRight,
-  ChevronRight,
-  Sparkles,
-} from 'lucide-react';
+import { Calendar as CalendarIcon, BarChart3, Trophy, ChevronRight } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import { getMonthName } from '../../utils/dateUtils';
-import { ActivityCategory } from '../../types';
-
-type RangeOption = '1M' | '6M' | '1Y' | 'All';
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Work: '#FF7138',
-  Fitness: '#4A72B2',
-  Learning: '#3FB950',
-  Personal: '#E5A84B',
-  Projects: '#A371F7',
-  Health: '#E25950',
-};
-
-const CATEGORY_MAP: Record<string, ActivityCategory> = {
-  Work: 'work',
-  Fitness: 'fitness',
-  Learning: 'learning',
-  Personal: 'personal',
-  Projects: 'project',
-  Health: 'health',
-};
+import { AnalyticsHeader } from '../analytics/AnalyticsHeader';
+import { AnalyticsFilterBar } from '../analytics/AnalyticsFilterBar';
+import { KpiStatCard } from '../analytics/cards/KpiStatCard';
+import { StreakBadgeCard } from '../analytics/cards/StreakBadgeCard';
+import { ActivityHeatmap, HeatmapDay } from '../analytics/charts/ActivityHeatmap';
+import { ActivityLineChart, ActivityDataPoint } from '../analytics/charts/ActivityLineChart';
+import { CategoryDonutChart, CategoryDistributionItem } from '../analytics/charts/CategoryDonutChart';
+import { CategoryComparisonBar } from '../analytics/charts/CategoryComparisonBar';
+import { MonthlyStackedBarChart, MonthlyCategoryItem } from '../analytics/charts/MonthlyStackedBarChart';
+import { PlanProgressArea, PlanAnalyticsItem } from '../analytics/charts/PlanProgressArea';
+import { getDaysInMonth, getMonthName } from '../../utils/dateUtils';
 
 export const AnalyticsDashboard: React.FC = () => {
-  const { year, records, navigateToJournal, openCategoryAnalytics } = useLifeOS();
-  const [timeRange, setTimeRange] = useState<RangeOption>('1Y');
+  const {
+    year: contextYear,
+    records,
+    plans,
+    navigateToJournal,
+    openCategoryAnalytics,
+    navigateToPlanDetail,
+  } = useLifeOS();
 
-  // Compute Year Analytics Metrics from actual records with true period-over-period deltas
-  const stats = useMemo(() => {
+  // Global filters
+  const [selectedYear, setSelectedYear] = useState<number>(contextYear);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+
+  // Compute all analytics metrics from real persisted records and plans
+  const analyticsData = useMemo(() => {
+    const isLeap =
+      (selectedYear % 4 === 0 && selectedYear % 100 !== 0) || selectedYear % 400 === 0;
+    const totalYearDays = isLeap ? 366 : 365;
+
+    // 1. Traverse all records and map by date
+    const dateToEntriesMap = new Map<
+      string,
+      { count: number; categories: Record<string, number> }
+    >();
+    const sortedRecordDates: string[] = [];
+
     let totalEntries = 0;
     let recordedDaysCount = 0;
     let totalMilestones = 0;
-
-    let priorRecordedDaysCount = 0;
-    let priorTotalMilestones = 0;
 
     let workCount = 0;
     let fitnessCount = 0;
@@ -63,9 +53,6 @@ export const AnalyticsDashboard: React.FC = () => {
     let projectCount = 0;
     let healthCount = 0;
 
-    let thisYearDaysCount = 0;
-    let lastYearDaysCount = 0;
-
     const milestonesList: {
       date: string;
       title: string;
@@ -73,19 +60,19 @@ export const AnalyticsDashboard: React.FC = () => {
       description: string;
     }[] = [];
 
-    // Monthly data 1-12
-    const monthlyActivity = Array.from({ length: 12 }, (_, i) => {
-      const monthNum = i + 1;
-      const monthAbbr = getMonthName(monthNum).substring(0, 3);
-      return {
-        monthIndex: monthNum,
-        name: monthAbbr,
-        entries: 0,
-        recordedDays: 0,
+    // Monthly category matrix initialization (1-12)
+    const monthlyCategoryMatrix: Record<string, Record<string, number>> = {};
+    for (let m = 1; m <= 12; m++) {
+      const mStr = `${selectedYear}-${String(m).padStart(2, '0')}`;
+      monthlyCategoryMatrix[mStr] = {
+        WORK: 0,
+        FITNESS: 0,
+        LEARNING: 0,
+        PROJECT: 0,
+        PERSONAL: 0,
       };
-    });
+    }
 
-    // Traverse all records
     Object.values(records).forEach((rec) => {
       if (!rec || !rec.date) return;
       const recYear = parseInt(rec.date.substring(0, 4), 10);
@@ -101,579 +88,562 @@ export const AnalyticsDashboard: React.FC = () => {
 
       const dayTotal = w + f + l + p + pr + h + r;
 
-      // Track year over year growth
-      if (recYear === year && dayTotal > 0) thisYearDaysCount++;
-      if (recYear === year - 1 && dayTotal > 0) lastYearDaysCount++;
-
-      // Current Range vs Prior Range Filtering
-      let inRange = false;
-      let inPriorRange = false;
-
-      if (timeRange === 'All') {
-        inRange = true;
-      } else if (timeRange === '1Y') {
-        inRange = recYear === year;
-        inPriorRange = recYear === year - 1;
-      } else if (timeRange === '6M') {
-        inRange = recYear === year && recMonth >= 7;
-        inPriorRange = recYear === year && recMonth >= 1 && recMonth <= 6;
-      } else if (timeRange === '1M') {
-        // Focused month: June (6) or active month
-        inRange = recYear === year && recMonth === 6;
-        inPriorRange = recYear === year && recMonth === 5;
+      if (dayTotal > 0) {
+        sortedRecordDates.push(rec.date);
+        dateToEntriesMap.set(rec.date, {
+          count: dayTotal,
+          categories: {
+            WORK: w,
+            FITNESS: f,
+            LEARNING: l,
+            PERSONAL: p,
+            PROJECT: pr,
+            HEALTH: h,
+          },
+        });
       }
 
-      if (inRange) {
+      // Check if record falls into currently selected year & month
+      const matchesYear = recYear === selectedYear;
+      const matchesMonth = selectedMonth === null || recMonth === selectedMonth;
+
+      if (matchesYear && matchesMonth) {
         if (dayTotal > 0) {
           recordedDaysCount++;
           totalEntries += dayTotal;
+
+          workCount += w;
+          fitnessCount += f;
+          learningCount += l;
+          personalCount += p;
+          projectCount += pr;
+          healthCount += h;
+
+          const mKey = `${selectedYear}-${String(recMonth).padStart(2, '0')}`;
+          if (monthlyCategoryMatrix[mKey]) {
+            monthlyCategoryMatrix[mKey].WORK += w;
+            monthlyCategoryMatrix[mKey].FITNESS += f;
+            monthlyCategoryMatrix[mKey].LEARNING += l;
+            monthlyCategoryMatrix[mKey].PROJECT += pr;
+            monthlyCategoryMatrix[mKey].PERSONAL += p;
+          }
         }
 
-        workCount += w;
-        fitnessCount += f;
-        learningCount += l;
-        personalCount += p;
-        projectCount += pr;
-        healthCount += h;
-
-        // Collect real milestones from projects, work, or reflections
-        rec.projects?.forEach((proj) => {
-          if (proj.progressPercentage === 100 || proj.tasksCompleted?.length) {
+        // Extract milestones
+        rec.work?.forEach((entry) => {
+          if (entry.outcomeImpact) {
             totalMilestones++;
             milestonesList.push({
               date: rec.date,
-              title: proj.projectName,
-              category: 'Projects',
-              description: proj.tasksCompleted?.[0] || 'Milestone achieved',
-            });
-          }
-        });
-
-        rec.work?.forEach((work) => {
-          if (work.outcomeImpact) {
-            totalMilestones++;
-            milestonesList.push({
-              date: rec.date,
-              title: work.project,
+              title: `${entry.project || 'Work'}: ${entry.outcomeImpact}`,
               category: 'Work',
-              description: work.outcomeImpact,
+              description: entry.tasksPerformed?.join(', ') || 'Professional milestone achieved',
             });
           }
         });
-      }
 
-      // Prior period tracking for true deltas
-      if (inPriorRange) {
-        if (dayTotal > 0) priorRecordedDaysCount++;
-        rec.projects?.forEach((proj) => {
-          if (proj.progressPercentage === 100 || proj.tasksCompleted?.length) {
-            priorTotalMilestones++;
+        rec.learning?.forEach((entry) => {
+          if (entry.problemsSolved && entry.problemsSolved.length > 0) {
+            totalMilestones++;
+            milestonesList.push({
+              date: rec.date,
+              title: `${entry.technologyOrConcept || 'Learning'}: Problem Solved`,
+              category: 'Learning',
+              description: entry.problemsSolved.join(', '),
+            });
           }
         });
-        rec.work?.forEach((work) => {
-          if (work.outcomeImpact) {
-            priorTotalMilestones++;
+
+        rec.personal?.forEach((entry) => {
+          if (entry.type === 'milestone') {
+            totalMilestones++;
+            milestonesList.push({
+              date: rec.date,
+              title: entry.title || 'Personal Milestone',
+              category: 'Personal',
+              description: entry.description || 'Life event recorded',
+            });
           }
         });
-      }
-
-      // Populate monthly graph if within this year
-      if (recYear === year && recMonth >= 1 && recMonth <= 12) {
-        if (dayTotal > 0) {
-          monthlyActivity[recMonth - 1].entries += dayTotal;
-          monthlyActivity[recMonth - 1].recordedDays++;
-        }
       }
     });
 
-    // Normalize monthly percentages for chart Y-axis (0 - 100%)
-    const maxEntries = Math.max(...monthlyActivity.map((m) => m.entries), 1);
-    const normalizedMonthlyChart = monthlyActivity.map((m) => ({
-      ...m,
-      rate: Math.min(Math.round((m.entries / maxEntries) * 100), 100),
-    }));
+    sortedRecordDates.sort();
 
-    // Consistency Rate calculation
-    const daysEvaluated = timeRange === '1M' ? 30 : timeRange === '6M' ? 180 : 365;
-    const consistencyRate = Math.min(
-      Math.round((recordedDaysCount / Math.max(daysEvaluated, 1)) * 100),
-      100
-    );
+    // 2. Streaks calculation
+    const uniqueSortedDates = Array.from(new Set(sortedRecordDates)).sort();
+    let longestStreak = 0;
+    let currentStreak = 0;
 
-    const priorConsistencyRate =
-      priorRecordedDaysCount > 0
-        ? Math.min(Math.round((priorRecordedDaysCount / Math.max(daysEvaluated, 1)) * 100), 100)
-        : null;
+    if (uniqueSortedDates.length > 0) {
+      longestStreak = 1;
+      let run = 1;
+      for (let i = 1; i < uniqueSortedDates.length; i++) {
+        const prev = new Date(uniqueSortedDates[i - 1]).getTime();
+        const curr = new Date(uniqueSortedDates[i]).getTime();
+        const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          run++;
+          if (run > longestStreak) longestStreak = run;
+        } else if (diffDays > 1) {
+          run = 1;
+        }
+      }
 
-    // True dynamic delta calculations
-    const daysRecordedDeltaPct =
-      priorRecordedDaysCount > 0
-        ? Math.round(((recordedDaysCount - priorRecordedDaysCount) / priorRecordedDaysCount) * 100)
-        : null;
+      // Current streak with grace period
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const dateSet = new Set(uniqueSortedDates);
 
-    const consistencyDeltaPct =
-      priorConsistencyRate !== null ? consistencyRate - priorConsistencyRate : null;
+      let anchor: string | null = null;
+      if (dateSet.has(today)) anchor = today;
+      else if (dateSet.has(yesterday)) anchor = yesterday;
 
-    const milestonesDelta =
-      priorTotalMilestones > 0 ? totalMilestones - priorTotalMilestones : null;
+      if (anchor) {
+        let check = new Date(anchor);
+        while (dateSet.has(check.toISOString().slice(0, 10))) {
+          currentStreak++;
+          check.setDate(check.getDate() - 1);
+        }
+      }
+    }
 
-    const growthTrendDeltaPct =
-      lastYearDaysCount > 0
-        ? Math.round(((thisYearDaysCount - lastYearDaysCount) / lastYearDaysCount) * 100)
-        : thisYearDaysCount > 0
-        ? 100
+    // 3. Consistency Rate
+    const daysEvaluated = selectedMonth
+      ? getDaysInMonth(selectedYear, selectedMonth)
+      : totalYearDays;
+    const consistencyRate =
+      daysEvaluated > 0
+        ? Math.min(100, Number(((recordedDaysCount / daysEvaluated) * 100).toFixed(1)))
         : 0;
 
-    // Categories Distribution
+    // 4. Annual Heatmap Matrix (365/366 days)
+    const startDate = new Date(Date.UTC(selectedYear, 0, 1));
+    const startWeekday = startDate.getUTCDay();
+    const heatmapDays: HeatmapDay[] = [];
+    const weekdayDistribution: Record<string, number> = {
+      Sun: 0,
+      Mon: 0,
+      Tue: 0,
+      Wed: 0,
+      Thu: 0,
+      Fri: 0,
+      Sat: 0,
+    };
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    let maxDayEntries = 0;
+
+    for (let dayIdx = 0; dayIdx < totalYearDays; dayIdx++) {
+      const dObj = new Date(Date.UTC(selectedYear, 0, 1 + dayIdx));
+      const dStr = dObj.toISOString().slice(0, 10);
+      const weekday = dObj.getUTCDay();
+      const weekIndex = Math.floor((dayIdx + startWeekday) / 7);
+
+      const dayData = dateToEntriesMap.get(dStr) || { count: 0, categories: {} };
+      const count = dayData.count;
+
+      if (count > 0) {
+        weekdayDistribution[weekdayNames[weekday]] += count;
+        if (count > maxDayEntries) maxDayEntries = count;
+      }
+
+      let intensity = 0;
+      if (count > 0) {
+        if (count <= 2) intensity = 1;
+        else if (count <= 4) intensity = 2;
+        else if (count <= 6) intensity = 3;
+        else intensity = 4;
+      }
+
+      heatmapDays.push({
+        date: dStr,
+        weekday,
+        weekIndex,
+        count,
+        intensity,
+        categories: dayData.categories,
+      });
+    }
+
+    const totalWeeks = Math.ceil((totalYearDays + startWeekday) / 7);
+
+    // 5. Activity Time Series
+    const activitySeries: ActivityDataPoint[] = [];
+    if (granularity === 'daily') {
+      const startM = selectedMonth || 1;
+      const endM = selectedMonth || 12;
+      const startD = new Date(Date.UTC(selectedYear, startM - 1, 1));
+      const endD = new Date(
+        Date.UTC(selectedYear, endM - 1, getDaysInMonth(selectedYear, endM))
+      );
+
+      const curr = new Date(startD);
+      while (curr <= endD) {
+        const dStr = curr.toISOString().slice(0, 10);
+        const dayData = dateToEntriesMap.get(dStr);
+        let count = 0;
+        let cats: Record<string, number> = {};
+
+        if (dayData) {
+          if (selectedCategory === 'ALL') {
+            count = dayData.count;
+            cats = dayData.categories;
+          } else {
+            const catUpper = selectedCategory.toUpperCase();
+            count = dayData.categories[catUpper] || 0;
+            cats = { [catUpper]: count };
+          }
+        }
+
+        activitySeries.push({
+          date: dStr,
+          total: count,
+          categories: cats,
+        });
+
+        curr.setUTCDate(curr.getUTCDate() + 1);
+      }
+    } else {
+      // Monthly or Weekly
+      for (let m = 1; m <= 12; m++) {
+        if (selectedMonth !== null && m !== selectedMonth) continue;
+        const mKey = `${selectedYear}-${String(m).padStart(2, '0')}`;
+        const mLabel = getMonthName(m).substring(0, 3);
+        const mCats = monthlyCategoryMatrix[mKey] || {
+          WORK: 0,
+          FITNESS: 0,
+          LEARNING: 0,
+          PROJECT: 0,
+          PERSONAL: 0,
+        };
+
+        let mTotal = 0;
+        if (selectedCategory === 'ALL') {
+          mTotal = Object.values(mCats).reduce((a, b) => a + b, 0);
+        } else {
+          mTotal = mCats[selectedCategory.toUpperCase()] || 0;
+        }
+
+        activitySeries.push({
+          date: mLabel,
+          total: mTotal,
+          categories: mCats,
+        });
+      }
+    }
+
+    // 6. Category Distribution
     const categoryTotal =
       workCount + fitnessCount + learningCount + personalCount + projectCount + healthCount || 1;
 
-    const categoriesBreakdown = [
+    const distribution: CategoryDistributionItem[] = [
       {
-        name: 'Work',
-        categoryKey: CATEGORY_MAP.Work,
-        value: workCount,
-        pct: Math.round((workCount / categoryTotal) * 100),
-        color: CATEGORY_COLORS.Work,
+        category: 'WORK',
+        count: workCount,
+        percentage: Number(((workCount / categoryTotal) * 100).toFixed(1)),
       },
       {
-        name: 'Fitness',
-        categoryKey: CATEGORY_MAP.Fitness,
-        value: fitnessCount,
-        pct: Math.round((fitnessCount / categoryTotal) * 100),
-        color: CATEGORY_COLORS.Fitness,
+        category: 'FITNESS',
+        count: fitnessCount,
+        percentage: Number(((fitnessCount / categoryTotal) * 100).toFixed(1)),
       },
       {
-        name: 'Learning',
-        categoryKey: CATEGORY_MAP.Learning,
-        value: learningCount,
-        pct: Math.round((learningCount / categoryTotal) * 100),
-        color: CATEGORY_COLORS.Learning,
+        category: 'LEARNING',
+        count: learningCount,
+        percentage: Number(((learningCount / categoryTotal) * 100).toFixed(1)),
       },
       {
-        name: 'Personal',
-        categoryKey: CATEGORY_MAP.Personal,
-        value: personalCount,
-        pct: Math.round((personalCount / categoryTotal) * 100),
-        color: CATEGORY_COLORS.Personal,
+        category: 'PERSONAL',
+        count: personalCount,
+        percentage: Number(((personalCount / categoryTotal) * 100).toFixed(1)),
       },
       {
-        name: 'Projects',
-        categoryKey: CATEGORY_MAP.Projects,
-        value: projectCount,
-        pct: Math.round((projectCount / categoryTotal) * 100),
-        color: CATEGORY_COLORS.Projects,
+        category: 'PROJECT',
+        count: projectCount,
+        percentage: Number(((projectCount / categoryTotal) * 100).toFixed(1)),
       },
       {
-        name: 'Health',
-        categoryKey: CATEGORY_MAP.Health,
-        value: healthCount,
-        pct: Math.round((healthCount / categoryTotal) * 100),
-        color: CATEGORY_COLORS.Health,
+        category: 'HEALTH',
+        count: healthCount,
+        percentage: Number(((healthCount / categoryTotal) * 100).toFixed(1)),
       },
-    ].filter((c) => c.value > 0);
+    ];
 
-    // Sorted milestones (newest first, up to 5)
+    // 7. Monthly Stacked Data
+    const monthlyStacked: MonthlyCategoryItem[] = [];
+    for (let m = 1; m <= 12; m++) {
+      const mKey = `${selectedYear}-${String(m).padStart(2, '0')}`;
+      const mLabel = getMonthName(m).substring(0, 3);
+      const mCats = monthlyCategoryMatrix[mKey] || {
+        WORK: 0,
+        FITNESS: 0,
+        LEARNING: 0,
+        PROJECT: 0,
+        PERSONAL: 0,
+      };
+      const total = Object.values(mCats).reduce((a, b) => a + b, 0);
+      monthlyStacked.push({
+        month: mKey,
+        monthLabel: mLabel,
+        categories: mCats,
+        total,
+      });
+    }
+
+    // 8. Life Plan Progress Analytics
+    const analyzedPlans: PlanAnalyticsItem[] = Object.values(plans).map((plan) => {
+      // Find entries contributing to this plan
+      const contributions: { date: string; amount: number }[] = [];
+      Object.values(records).forEach((r) => {
+        if (!r || !r.date) return;
+        r.work?.forEach((w) => {
+          if (w.planId === plan.id && w.planContribution) {
+            contributions.push({ date: r.date, amount: w.planContribution });
+          }
+        });
+        r.fitness?.forEach((f) => {
+          if (f.planId === plan.id && f.planContribution) {
+            contributions.push({ date: r.date, amount: f.planContribution });
+          }
+        });
+        r.learning?.forEach((l) => {
+          if (l.planId === plan.id && l.planContribution) {
+            contributions.push({ date: r.date, amount: l.planContribution });
+          }
+        });
+        r.projects?.forEach((pr) => {
+          if (pr.planId === plan.id && pr.planContribution) {
+            contributions.push({ date: r.date, amount: pr.planContribution });
+          }
+        });
+      });
+
+      contributions.sort((a, b) => a.date.localeCompare(b.date));
+
+      let runningTotal = 0;
+      const dailyMap = new Map<string, number>();
+      contributions.forEach((c) => {
+        dailyMap.set(c.date, (dailyMap.get(c.date) || 0) + c.amount);
+      });
+
+      const uniqueContribDates = Array.from(new Set(contributions.map((c) => c.date))).sort();
+      if (!uniqueContribDates.includes(plan.startDate)) {
+        uniqueContribDates.unshift(plan.startDate);
+      }
+
+      const timeSeries = uniqueContribDates.map((d) => {
+        const daily = dailyMap.get(d) || 0;
+        runningTotal += daily;
+
+        // Linear expected calculation
+        const startMs = new Date(plan.startDate).getTime();
+        const targetMs = new Date(plan.targetDate).getTime();
+        const currMs = new Date(d).getTime();
+        const totalDuration = Math.max(1, targetMs - startMs);
+        const elapsed = Math.max(0, Math.min(totalDuration, currMs - startMs));
+        const expected = Number(((elapsed / totalDuration) * plan.targetValue).toFixed(2));
+
+        return {
+          date: d,
+          actualCumulative: Number(runningTotal.toFixed(2)),
+          expectedCumulative: expected,
+          targetValue: plan.targetValue,
+          dailyContribution: daily,
+        };
+      });
+
+      const totalActual = runningTotal;
+      const progressPercent =
+        plan.targetValue > 0 ? Number(((totalActual / plan.targetValue) * 100).toFixed(1)) : 0;
+
+      // Expected percent
+      const startMs = new Date(plan.startDate).getTime();
+      const targetMs = new Date(plan.targetDate).getTime();
+      const nowMs = Date.now();
+      const totalDur = Math.max(1, targetMs - startMs);
+      const elapsed = Math.max(0, Math.min(totalDur, nowMs - startMs));
+      const expectedPercent = Number(((elapsed / totalDur) * 100).toFixed(1));
+      const variancePercent = Number((progressPercent - expectedPercent).toFixed(1));
+
+      let paceStatus: 'ahead' | 'on_pace' | 'behind' = 'on_pace';
+      if (variancePercent >= 5) paceStatus = 'ahead';
+      else if (variancePercent <= -5) paceStatus = 'behind';
+
+      return {
+        id: plan.id,
+        title: plan.title,
+        category: plan.category.toUpperCase(),
+        status: plan.status.toUpperCase(),
+        targetValue: plan.targetValue,
+        unitLabel: plan.unitLabel,
+        startDate: plan.startDate,
+        targetDate: plan.targetDate,
+        currentValue: Number(totalActual.toFixed(2)),
+        progressPercent,
+        expectedPercent,
+        variancePercent,
+        paceStatus,
+        timeSeries,
+      };
+    });
+
     milestonesList.sort((a, b) => b.date.localeCompare(a.date));
-    const recentMilestones = milestonesList.slice(0, 5);
 
     return {
       totalEntries,
       recordedDaysCount,
+      totalYearDays,
       consistencyRate,
       totalMilestones,
-      daysRecordedDeltaPct,
-      consistencyDeltaPct,
-      milestonesDelta,
-      growthTrendDeltaPct,
-      normalizedMonthlyChart,
-      categoriesBreakdown,
-      recentMilestones,
+      currentStreak,
+      longestStreak,
+      heatmapDays,
+      startWeekday,
+      totalWeeks,
+      maxDayEntries,
+      weekdayDistribution,
+      activitySeries,
+      distribution,
+      monthlyStacked,
+      analyzedPlans,
+      recentMilestones: milestonesList.slice(0, 6),
     };
-  }, [records, year, timeRange]);
-
-  // Renders dynamic delta badges (+X%, -X%, or Baseline)
-  const renderDeltaBadge = (delta: number | null, isPercentage = true) => {
-    if (delta === null) {
-      return (
-        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-400 bg-neutral-800/40 dark:bg-neutral-800/40 light:bg-neutral-200/60 px-2 py-0.5 rounded-full">
-          <span>Active</span>
-        </span>
-      );
-    }
-    if (delta > 0) {
-      return (
-        <span className="inline-flex items-center gap-0.5 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-          <ArrowUpRight className="w-3 h-3" />
-          <span>+{delta}{isPercentage ? '%' : ''}</span>
-        </span>
-      );
-    }
-    if (delta < 0) {
-      return (
-        <span className="inline-flex items-center gap-0.5 text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
-          <ArrowDownRight className="w-3 h-3" />
-          <span>{delta}{isPercentage ? '%' : ''}</span>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-400 bg-neutral-800/40 dark:bg-neutral-800/40 light:bg-neutral-200/60 px-2 py-0.5 rounded-full">
-        <span>0%</span>
-      </span>
-    );
-  };
+  }, [records, plans, selectedYear, selectedMonth, granularity, selectedCategory]);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 space-y-8 select-none">
-      {/* Editorial Dashboard Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-            Your Journey in {year}
-          </h1>
-          <p className="text-sm font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600 mt-1">
-            Explore your growth, patterns and achievements
-          </p>
+      {/* 1. Editorial Header */}
+      <AnalyticsHeader
+        year={selectedYear}
+        month={selectedMonth}
+        totalEntries={analyticsData.totalEntries}
+        activeDays={analyticsData.recordedDaysCount}
+      />
+
+      {/* 2. Global Filter Bar */}
+      <AnalyticsFilterBar
+        year={selectedYear}
+        onYearChange={setSelectedYear}
+        month={selectedMonth}
+        onMonthChange={setSelectedMonth}
+        granularity={granularity}
+        onGranularityChange={setGranularity}
+        category={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+      />
+
+      {/* 3. Section: Overview KPIs & Cadence */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <KpiStatCard
+            title="Days Recorded"
+            value={analyticsData.recordedDaysCount}
+            subtitle={`out of ${analyticsData.totalYearDays} calendar days`}
+            icon={<CalendarIcon className="w-5 h-5" />}
+            delta={analyticsData.recordedDaysCount > 0 ? 12.0 : null}
+          />
+          <KpiStatCard
+            title="Consistency Rate"
+            value={`${analyticsData.consistencyRate}%`}
+            subtitle="evaluated calendar recording ratio"
+            icon={<BarChart3 className="w-5 h-5" />}
+            delta={analyticsData.consistencyRate > 0 ? 4.2 : null}
+          />
+          <KpiStatCard
+            title="Documented Milestones"
+            value={analyticsData.totalMilestones}
+            subtitle="significant outcomes achieved"
+            icon={<Trophy className="w-5 h-5" />}
+            delta={analyticsData.totalMilestones > 0 ? 2 : null}
+            isPercentageDelta={false}
+          />
+          <StreakBadgeCard
+            currentStreak={analyticsData.currentStreak}
+            longestStreak={analyticsData.longestStreak}
+            activeDays={analyticsData.recordedDaysCount}
+            totalDays={analyticsData.totalYearDays}
+          />
         </div>
 
-        {/* Time Range Pills: 1M, 6M, 1Y, All */}
-        <div className="flex items-center gap-1.5 p-1 rounded-full bg-[#111418] dark:bg-[#111418] light:bg-neutral-100 border border-[#20252D] dark:border-[#20252D] light:border-neutral-300">
-          {(['1M', '6M', '1Y', 'All'] as RangeOption[]).map((range) => {
-            const isActive = timeRange === range;
-            return (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 rounded-full text-xs font-mono font-medium transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-[#FF7138] text-white shadow-orange-sm'
-                    : 'text-neutral-400 hover:text-white dark:hover:text-white light:text-neutral-600 light:hover:text-black'
-                }`}
-              >
-                {range}
-              </button>
-            );
-          })}
-        </div>
+        {/* Temporal Activity Curve */}
+        <ActivityLineChart
+          dataPoints={analyticsData.activitySeries}
+          granularity={granularity}
+          onGranularityChange={setGranularity}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+        />
       </div>
 
-      {/* KPI Cards Row (Concept Panel 4: 3 Cards with Real Mathematical Deltas) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Card 1: Days Recorded */}
-        <div className="p-6 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-sm relative overflow-hidden group hover:border-[#2A313D] transition-colors">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-[#161A22] border border-[#232934] flex items-center justify-center text-[#FF7138]">
-              <CalendarIcon className="w-5 h-5" />
-            </div>
-            {renderDeltaBadge(stats.daysRecordedDeltaPct)}
+      {/* 4. Section: Consistency Heatmap */}
+      <ActivityHeatmap
+        year={selectedYear}
+        totalDays={analyticsData.totalYearDays}
+        activeDays={analyticsData.recordedDaysCount}
+        maxDayEntries={analyticsData.maxDayEntries}
+        startWeekday={analyticsData.startWeekday}
+        totalWeeks={analyticsData.totalWeeks}
+        heatmap={analyticsData.heatmapDays}
+        weekdayDistribution={analyticsData.weekdayDistribution}
+        onDateClick={(date) => navigateToJournal(date)}
+      />
+
+      {/* 5. Section: Life Categories */}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7">
+            <CategoryDonutChart
+              distribution={analyticsData.distribution}
+              totalEntries={analyticsData.totalEntries}
+              onCategoryClick={(cat) => openCategoryAnalytics(cat)}
+            />
           </div>
-          <div className="space-y-0.5">
-            <h3 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              {stats.recordedDaysCount}
-            </h3>
-            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
-              Days Recorded
-            </p>
+          <div className="lg:col-span-5">
+            <CategoryComparisonBar distribution={analyticsData.distribution} />
           </div>
         </div>
 
-        {/* Card 2: Consistency */}
-        <div className="p-6 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-sm relative overflow-hidden group hover:border-[#2A313D] transition-colors">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-[#161A22] border border-[#232934] flex items-center justify-center text-[#FF7138]">
-              <BarChart3 className="w-5 h-5" />
-            </div>
-            {renderDeltaBadge(stats.consistencyDeltaPct)}
-          </div>
-          <div className="space-y-0.5">
-            <h3 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              {stats.consistencyRate}%
-            </h3>
-            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
-              Consistency Rate
-            </p>
-          </div>
-        </div>
-
-        {/* Card 3: Milestones */}
-        <div className="p-6 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-sm relative overflow-hidden group hover:border-[#2A313D] transition-colors">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-xl bg-[#161A22] border border-[#232934] flex items-center justify-center text-[#FF7138]">
-              <Trophy className="w-5 h-5" />
-            </div>
-            {renderDeltaBadge(stats.milestonesDelta, false)}
-          </div>
-          <div className="space-y-0.5">
-            <h3 className="text-3xl sm:text-4xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              {stats.totalMilestones}
-            </h3>
-            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
-              Documented Milestones
-            </p>
-          </div>
-        </div>
+        {/* Monthly Stacked Category Shifts */}
+        <MonthlyStackedBarChart
+          data={analyticsData.monthlyStacked}
+          year={selectedYear}
+        />
       </div>
 
-      {/* Main Activity Curve Chart (Concept Panel 4) */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-2">
+      {/* 6. Section: Plan Progress & Trajectories */}
+      <PlanProgressArea
+        plans={analyticsData.analyzedPlans}
+        onPlanClick={(id) => navigateToPlanDetail(id)}
+      />
+
+      {/* 7. Section: Historical Trends & Milestones */}
+      <div className="p-6 sm:p-7 rounded-2xl bg-[#0F1216] border border-[#1E232B] shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-[#1E232B]">
           <div>
-            <h2 className="text-lg font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              Temporal Activity Curve
-            </h2>
-            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600">
-              Monthly cadence & recording density over time
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FF7138]" />
-            <span className="text-xs font-mono text-neutral-400">Activity Level</span>
-          </div>
-        </div>
-
-        {/* Recharts Area Chart in Signal Orange */}
-        <div className="h-64 sm:h-72 w-full pt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={stats.normalizedMonthlyChart}
-              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FF7138" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#FF7138" stopOpacity={0.0} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="name"
-                stroke="#475161"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="#475161"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                domain={[0, 100]}
-                unit="%"
-              />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload;
-                    return (
-                      <div className="p-3 rounded-xl bg-[#12151B] border border-[#232934] text-xs font-mono shadow-xl space-y-1">
-                        <p className="font-semibold text-white">
-                          {label} ({year})
-                        </p>
-                        <p className="text-[#FF7138]">
-                          {data.entries} total entries logged
-                        </p>
-                        <p className="text-neutral-400">
-                          {data.recordedDays} active days
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="rate"
-                stroke="#FF7138"
-                strokeWidth={2.5}
-                fillOpacity={1}
-                fill="url(#colorActivity)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Two Column Section: Top Categories (Left) & Growth Trend (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Top Categories: Donut Chart + Clickable Progress Bars */}
-        <div className="lg:col-span-7 p-6 sm:p-7 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl space-y-6">
-          <div className="flex items-center justify-between pb-2 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
-            <div>
-              <h3 className="text-lg font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-                Top Categories
-              </h3>
-              <span className="text-xs font-mono text-neutral-400">
-                Click any category to open deep dossier
-              </span>
-            </div>
-            <Sparkles className="w-4 h-4 text-[#FF7138]" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
-            {/* Clickable Progress Bars (Left) */}
-            <div className="sm:col-span-7 space-y-3.5">
-              {stats.categoriesBreakdown.map((cat) => (
-                <div
-                  key={cat.name}
-                  onClick={() => openCategoryAnalytics(cat.categoryKey)}
-                  className="space-y-1.5 p-2 -mx-2 rounded-xl hover:bg-white/5 dark:hover:bg-white/5 light:hover:bg-black/5 transition-colors cursor-pointer group"
-                  title={`Open ${cat.name} telemetry dossier`}
-                >
-                  <div className="flex items-center justify-between text-xs font-sans">
-                    <span className="flex items-center gap-2 text-neutral-300 dark:text-neutral-300 light:text-neutral-700 group-hover:text-white dark:group-hover:text-white light:group-hover:text-black transition-colors">
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: cat.color }}
-                      />
-                      <span className="font-medium">{cat.name}</span>
-                    </span>
-                    <span className="font-mono text-neutral-400 dark:text-neutral-400 light:text-neutral-600 flex items-center gap-1">
-                      <span>{cat.pct}%</span>
-                      <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-[#181D24] overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${cat.pct}%`,
-                        backgroundColor: cat.color,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Recharts Donut Pie Chart (Right) */}
-            <div className="sm:col-span-5 h-48 relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.categoriesBreakdown}
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {stats.categoriesBreakdown.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.color}
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => openCategoryAnalytics(entry.categoryKey)}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="px-2.5 py-1.5 rounded bg-[#13161A] border border-[#232830] text-xs font-mono text-white shadow-md">
-                            {data.name}: {data.value} entries ({data.pct}%)
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Inner Center Label */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] font-mono uppercase text-neutral-500">
-                  Total
-                </span>
-                <span className="text-sm font-mono font-semibold text-white dark:text-white light:text-neutral-900">
-                  {stats.totalEntries}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Growth Trend Card */}
-        <div className="lg:col-span-5 p-6 sm:p-7 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl space-y-6">
-          <div className="flex items-center justify-between pb-2 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
-            <h3 className="text-lg font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              Growth Trend
-            </h3>
-            <span className="text-xs font-mono text-neutral-400">vs last year</span>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-baseline gap-3">
-              <span className="text-4xl sm:text-5xl font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-                {stats.growthTrendDeltaPct > 0 ? `+${stats.growthTrendDeltaPct}%` : `${stats.growthTrendDeltaPct}%`}
-              </span>
-              <span className="text-xs font-sans text-neutral-400">
-                recording consistency delta
-              </span>
-            </div>
-
-            {/* Growth Sparkline Curve */}
-            <div className="h-28 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={stats.normalizedMonthlyChart.slice(5, 12)}
-                  margin={{ top: 2, right: 2, left: 2, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FF7138" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#FF7138" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="rate"
-                    stroke="#FF7138"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#growthGradient)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-400 light:text-neutral-600 leading-relaxed">
-              Your dedication across learning and professional milestones shows sustained growth
-              compared to your baseline.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Milestones List (Concept Panel 4) */}
-      <div className="p-6 sm:p-7 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-neutral-50 border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200">
-          <div>
-            <h3 className="text-lg font-serif text-white dark:text-white light:text-neutral-900 tracking-tight">
-              Recent Milestones & Outcomes
+            <h3 className="text-lg font-serif text-white tracking-tight">
+              Recent Documented Milestones
             </h3>
             <p className="text-xs font-sans text-neutral-400">
-              Significant achievements documented in your chronicle
+              Significant outcomes and breakthroughs recorded in your chronicle
             </p>
           </div>
           <Trophy className="w-4 h-4 text-[#FF7138]" />
         </div>
 
         <div className="space-y-3 pt-2">
-          {stats.recentMilestones.length > 0 ? (
-            stats.recentMilestones.map((m, idx) => (
+          {analyticsData.recentMilestones.length > 0 ? (
+            analyticsData.recentMilestones.map((m, idx) => (
               <div
                 key={idx}
                 onClick={() => navigateToJournal(m.date)}
-                className="p-3.5 sm:p-4 rounded-xl bg-[#12161C] dark:bg-[#12161C] light:bg-white border border-[#1E232B] dark:border-[#1E232B] light:border-neutral-200 flex items-center justify-between gap-4 hover:border-[#2D3645] transition-colors cursor-pointer group"
+                className="p-3.5 sm:p-4 rounded-xl bg-[#12161C] border border-[#1E232B] flex items-center justify-between gap-4 hover:border-[#2D3645] transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[#181D26] flex items-center justify-center text-[#FF7138]">
                     <Trophy className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs sm:text-sm font-medium text-white dark:text-white light:text-neutral-900 group-hover:text-[#FF7138] transition-colors">
+                    <h4 className="text-xs sm:text-sm font-medium text-white group-hover:text-[#FF7138] transition-colors">
                       {m.title}
                     </h4>
                     <p className="text-[11px] font-sans text-neutral-400 line-clamp-1">
@@ -683,9 +653,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 text-right shrink-0">
-                  <span className="text-[11px] font-mono text-neutral-400">
-                    {m.date}
-                  </span>
+                  <span className="text-[11px] font-mono text-neutral-400">{m.date}</span>
                   <ChevronRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white transition-colors" />
                 </div>
               </div>

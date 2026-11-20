@@ -11,6 +11,7 @@ import {
   LifePlan,
 } from '../types';
 import { generateSampleRecords, generateSamplePlans } from './sampleData';
+import { syncDailyRecordToCloud, syncPlanToCloud, syncPlanDeleteToCloud } from './cloudSync';
 
 const SCHEMA_VERSION = 1;
 const STORAGE_KEYS = {
@@ -251,6 +252,7 @@ export function saveDailyRecord(record: DailyRecord): void {
     all[record.date] = updatedRecord;
     localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(all));
     notifyListeners();
+    syncDailyRecordToCloud(updatedRecord);
   } catch (err) {
     console.error('Failed to save daily record:', err);
   }
@@ -413,6 +415,7 @@ export function savePlan(plan: LifePlan): LifePlan {
     all[updatedPlan.id] = updatedPlan;
     localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(all));
     notifyListeners();
+    syncPlanToCloud(updatedPlan);
     return updatedPlan;
   } catch (err) {
     console.error('Failed to save plan:', err);
@@ -439,6 +442,7 @@ export function deletePlan(id: string): void {
       delete all[id];
       localStorage.setItem(STORAGE_KEYS.PLANS, JSON.stringify(all));
       notifyListeners();
+      syncPlanDeleteToCloud(id);
     }
   } catch (err) {
     console.error('Failed to delete plan:', err);

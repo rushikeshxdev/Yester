@@ -73,6 +73,7 @@ export class DailyRecordsService {
           healthData: dto.healthData ?? {},
           reflection: dto.reflection ?? {},
           revision: 1,
+          ...(dto.createdAt ? { createdAt: new Date(dto.createdAt) } : {}),
         },
         include: {
           entries: {

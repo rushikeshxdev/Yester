@@ -77,6 +77,7 @@ export class EntriesService {
         planContribution: dto.planContribution ?? null,
         payload: dto.payload ?? {},
         revision: 1,
+        ...(dto.createdAt ? { createdAt: new Date(dto.createdAt) } : {}),
       },
     });
   }

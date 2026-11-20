@@ -1,11 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Plus, Settings, Search, Download, User } from 'lucide-react';
+import React from 'react';
+import { Sparkles, Plus, Settings, Search } from 'lucide-react';
 import { useLifeOS } from '../../context/LifeOSContext';
-import { exportBackupJSON } from '../../services/storage';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './Button';
+import { UserNavPill } from '../auth/UserNavPill';
 
-export const BreadcrumbNav: React.FC = () => {
+export interface BreadcrumbNavProps {
+  onOpenAuth?: () => void;
+  onOpenMigration?: () => void;
+}
+
+export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({
+  onOpenAuth,
+  onOpenMigration,
+}) => {
   const {
     screen,
     navigateToYears,
@@ -19,49 +27,7 @@ export const BreadcrumbNav: React.FC = () => {
     clearSampleData,
     loadSampleData,
     openQuickCapture,
-    records,
   } = useLifeOS();
-
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
-
-  // Close profile dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-        setIsProfileOpen(false);
-      }
-    };
-    if (isProfileOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isProfileOpen]);
-
-  const totalRecordedDays = Object.values(records).filter(
-    (r) =>
-      r &&
-      (r.work?.length > 0 ||
-        r.fitness?.length > 0 ||
-        r.learning?.length > 0 ||
-        r.projects?.length > 0 ||
-        r.personal?.length > 0 ||
-        !!r.health ||
-        !!r.reflection)
-  ).length;
-
-  // Handle direct JSON export
-  const handleExportBackup = () => {
-    const jsonString = exportBackupJSON();
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `yester-chronicle-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setIsProfileOpen(false);
-  };
 
   // If on the full-screen year selector, render the dedicated minimal immersive bar
   if (screen === 'year') {
@@ -227,64 +193,11 @@ export const BreadcrumbNav: React.FC = () => {
             <Settings className="w-4 h-4" />
           </button>
 
-          {/* Profile Circle Avatar with Dropdown */}
-          <div className="relative" ref={profileRef}>
-            <button
-              onClick={() => setIsProfileOpen((prev) => !prev)}
-              className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#FF7138] to-[#FF8555] flex items-center justify-center text-white font-mono font-bold text-xs select-none shadow-orange-sm cursor-pointer hover:scale-105 active:scale-95 transition-transform"
-              title="Yester Chronicle Profile"
-              aria-label="Profile Menu"
-            >
-              Y
-            </button>
-
-            {/* Profile Dropdown Popover */}
-            {isProfileOpen && (
-              <div className="absolute right-0 mt-2.5 w-60 rounded-2xl bg-[#0F1216] dark:bg-[#0F1216] light:bg-white border border-[#232934] dark:border-[#232934] light:border-neutral-200 shadow-2xl p-3 space-y-3 z-50 animate-fade-in select-none">
-                <div className="px-2 py-1.5 border-b border-[#1A1F26] dark:border-[#1A1F26] light:border-neutral-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[#181D26] flex items-center justify-center text-[#FF7138]">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-serif text-white dark:text-white light:text-neutral-900 font-medium">
-                        Sovereign Chronicle
-                      </h4>
-                      <p className="text-[10px] font-mono text-[#FF7138]">
-                        {totalRecordedDays} {totalRecordedDays === 1 ? 'day' : 'days'} archived
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <button
-                    onClick={() => {
-                      setIsProfileOpen(false);
-                      openSettings();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-sans text-neutral-300 dark:text-neutral-300 light:text-neutral-700 hover:text-white hover:bg-white/5 dark:hover:bg-white/5 light:hover:bg-black/5 transition-colors text-left cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-neutral-400" />
-                    <span>Preferences & Settings</span>
-                  </button>
-
-                  <button
-                    onClick={handleExportBackup}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-sans text-neutral-300 dark:text-neutral-300 light:text-neutral-700 hover:text-white hover:bg-white/5 dark:hover:bg-white/5 light:hover:bg-black/5 transition-colors text-left cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5 text-neutral-400" />
-                    <span>Export JSON Chronicle</span>
-                  </button>
-                </div>
-
-                <div className="pt-2 border-t border-[#1A1F26] dark:border-[#1A1F26] light:border-neutral-100 px-2 flex items-center justify-between text-[10px] font-mono text-neutral-500">
-                  <span>Local Sovereign Data</span>
-                  <span className="text-emerald-400">Offline Ready</span>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Sovereign Vault / User Navigation Pill */}
+          <UserNavPill
+            onOpenAuth={onOpenAuth || (() => {})}
+            onOpenMigration={onOpenMigration}
+          />
         </div>
       </div>
     </header>

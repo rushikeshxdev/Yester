@@ -23,6 +23,9 @@ import {
 } from '../services/storage';
 import { getTodayDateKey, parseDateKey, formatDateKey } from '../utils/dateUtils';
 import { parseHash, buildHash } from '../utils/routerUtils';
+import { useAuth } from './AuthContext';
+import { plansApi } from '../api/plans.api';
+import { mapLifePlanResponseToDomain } from '../utils/recordAdapter';
 
 interface QuickCaptureState {
   isOpen: boolean;
@@ -129,6 +132,8 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [plans, setPlans] = useState<Record<string, LifePlan>>(() => getAllPlans());
   const [activePlanId, setActivePlanId] = useState<string | null>(initialRoute?.planId ?? null);
 
+  const { mode } = useAuth();
+
   // Listen to storage mutations
   useEffect(() => {
     const unsubscribe = subscribeToStorage(() => {
@@ -138,6 +143,24 @@ export const LifeOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
     return () => unsubscribe();
   }, []);
+
+  // Fetch plans from cloud when in sovereign mode
+  useEffect(() => {
+    if (mode === 'sovereign') {
+      plansApi
+        .getPlans()
+        .then((serverPlans) => {
+          const mapped: Record<string, LifePlan> = {};
+          serverPlans.forEach((p) => {
+            mapped[p.id] = mapLifePlanResponseToDomain(p);
+          });
+          setPlans((prev) => ({ ...prev, ...mapped }));
+        })
+        .catch((e) => {
+          console.warn('[LifeOSContext] Could not fetch sovereign cloud plans:', e);
+        });
+    }
+  }, [mode]);
 
   // Synchronize state changes to URL hash (two-way router)
   useEffect(() => {

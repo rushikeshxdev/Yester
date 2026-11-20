@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ChevronLeft,
@@ -27,6 +27,9 @@ import {
   updateHealthEntry,
   updateDailyReflection,
 } from '../../services/storage';
+import { useAuth } from '../../context/AuthContext';
+import { dailyRecordsApi } from '../../api/dailyRecords.api';
+import { mapDailyRecordResponseToDomain } from '../../utils/recordAdapter';
 import { ActivityCategory } from '../../types';
 import { WorkSection } from '../daily/WorkSection';
 import { FitnessSection } from '../daily/FitnessSection';
@@ -80,6 +83,27 @@ export const DailyRecordView: React.FC = () => {
     navigateToSearch,
   } = useLifeOS();
   const { reducedMotion } = useTheme();
+  const { mode } = useAuth();
+
+  // Reconcile selected date with authoritative server record when in sovereign mode
+  useEffect(() => {
+    let isMounted = true;
+    if (mode === 'sovereign' && selectedDate) {
+      dailyRecordsApi
+        .getRecord(selectedDate)
+        .then((serverRec) => {
+          if (serverRec && isMounted) {
+            saveDailyRecord(mapDailyRecordResponseToDomain(serverRec));
+          }
+        })
+        .catch((e) => {
+          console.warn(`[DailyRecordView] Could not fetch server record for ${selectedDate}:`, e);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [mode, selectedDate]);
 
   const record = records[selectedDate] || getOrCreateDailyRecord(selectedDate);
   const { dayOfWeek, dayNumber, monthName, year } = formatDisplayDate(selectedDate);

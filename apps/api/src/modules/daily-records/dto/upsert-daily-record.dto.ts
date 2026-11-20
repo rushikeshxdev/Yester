@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsDateString, IsInt, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class UpsertDailyRecordDto {
   @ApiPropertyOptional({
@@ -9,6 +9,14 @@ export class UpsertDailyRecordDto {
   @IsOptional()
   @IsUUID('4', { message: 'id must be a valid UUID v4' })
   id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Original creation timestamp (optional, used for lossless migration)',
+    example: '2026-11-01T12:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'createdAt must be a valid ISO date string' })
+  createdAt?: string;
 
   @ApiPropertyOptional({
     description: 'Headline or summary for the day',

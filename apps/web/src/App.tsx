@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useLifeOS } from './context/LifeOSContext';
 import { BreadcrumbNav } from './components/common/BreadcrumbNav';
@@ -13,8 +13,13 @@ import { PlanDetailView } from './components/screens/PlanDetailView';
 import { SettingsModal } from './components/screens/SettingsModal';
 import { CategoryDetailModal } from './components/screens/CategoryDetailModal';
 import { QuickCaptureModal } from './components/quickCapture/QuickCaptureModal';
+import { AuthModal } from './components/auth/AuthModal';
+import { MigrationModal } from './components/auth/MigrationModal';
+import { inspectLocalArchive } from './services/migration';
 
 export const App: React.FC = () => {
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isMigrationOpen, setIsMigrationOpen] = useState(false);
   const {
     screen,
     openQuickCapture,
@@ -73,7 +78,10 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#090A0C] dark:bg-[#090A0C] light:bg-[#F5F4F0] text-white dark:text-[#F5F4F0] light:text-[#191B20] transition-colors flex flex-col font-sans selection:bg-[#FF7138] selection:text-white">
       {/* TIME FIRST Global Header Nav */}
-      <BreadcrumbNav />
+      <BreadcrumbNav
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenMigration={() => setIsMigrationOpen(true)}
+      />
 
       {/* Main Temporal Navigation Routing */}
       <main className="flex-1 w-full">
@@ -95,6 +103,24 @@ export const App: React.FC = () => {
 
       {/* Settings Modal (Concept Panel 7) */}
       <SettingsModal />
+
+      {/* Sovereign Vault Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={() => {
+          const archive = inspectLocalArchive();
+          if (archive.plansCount + archive.recordsCount + archive.entriesCount > 0) {
+            setIsMigrationOpen(true);
+          }
+        }}
+      />
+
+      {/* Lossless Sovereign Cloud Migration Modal */}
+      <MigrationModal
+        isOpen={isMigrationOpen}
+        onClose={() => setIsMigrationOpen(false)}
+      />
 
       {/* Floating Orange Quick Capture Action (Concept Panel 6) */}
       {screen !== 'year' && (

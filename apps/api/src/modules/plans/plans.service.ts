@@ -57,6 +57,7 @@ export class PlansService {
         pacingType: dto.pacingType ?? PacingType.LINEAR,
         status: PlanStatus.ACTIVE,
         revision: 1,
+        ...(dto.createdAt ? { createdAt: new Date(dto.createdAt) } : {}),
         milestones: {
           create: milestonesData,
         },

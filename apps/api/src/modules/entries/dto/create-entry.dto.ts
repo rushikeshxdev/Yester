@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ActivityCategory } from '@prisma/client';
 import {
+  IsDateString,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -19,6 +20,14 @@ export class CreateEntryDto {
   @IsOptional()
   @IsUUID('4', { message: 'id must be a valid UUID v4' })
   id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Original creation timestamp (optional, used for lossless migration)',
+    example: '2026-11-01T12:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'createdAt must be a valid ISO date string' })
+  createdAt?: string;
 
   @ApiProperty({
     description: 'ID of the parent DailyRecord envelope',

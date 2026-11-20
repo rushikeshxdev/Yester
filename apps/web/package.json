@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "npx -y tsx src/services/__tests__/planService.test.ts && npx -y tsx src/services/__tests__/storage.test.ts && npx -y tsx src/services/__tests__/analytics.test.ts"
+    "test": "npx -y tsx src/services/__tests__/planService.test.ts && npx -y tsx src/services/__tests__/storage.test.ts && npx -y tsx src/services/__tests__/analytics.test.ts && npx -y tsx src/services/__tests__/apiClient.test.ts && npx -y tsx src/services/__tests__/migration.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
